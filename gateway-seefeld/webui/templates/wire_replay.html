@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Wire Replay — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<h1 class="page-h1">Wire Replay</h1>
+<p class="page-desc">{{ t("Rielabora un frame registrato in prova, senza inviare niente al software dello studio. Serve a capire come il gateway ha letto un messaggio.") }}</p>
+
+<section class="card">
+  <div class="card-header"><div class="card-title">{{ t("Frame registrati") }}</div></div>
+  {% if captures %}
+  <div class="tz-table-wrap">
+  <table class="tz-table">
+    <thead><tr><th>{{ t("Ricevuto") }}</th><th>{{ t("Apparecchio") }}</th><th>{{ t("Dimensione") }}</th><th>{{ t("File") }}</th><th><span class="tz-sr">{{ t("Azioni") }}</span></th></tr></thead>
+    <tbody>
+    {% for c in captures %}
+      <tr>
+        <td class="mono" data-ts="{{ c.ts|int }}">{{ c.ts|int }}</td>
+        <td>{{ c.device }}</td>
+        <td>{{ t("{n} byte", n=c.size) }}</td>
+        <td class="mono">{{ c.filename }}</td>
+        <td><div class="tz-actions"><button class="btn btn-primary" data-f="{{ c.filename }}" onclick="doReplay(this.dataset.f)">{{ t("Rielabora in prova") }}</button></div></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="tz-empty">{{ t("Nessun frame registrato in logs/trace/.") }}</p>
+  {% endif %}
+</section>
+
+<pre id="result" class="rd-hl7" style="max-height:520px;" hidden></pre>
+
+<script>
+document.querySelectorAll('[data-ts]').forEach(function (td) {
+  var d = new Date(parseInt(td.dataset.ts, 10) * 1000);
+  if (!isNaN(d.getTime())) td.textContent = d.toLocaleString(window.I18N_LOCALE);
+});
+async function doReplay(fname) {
+  var el = document.getElementById('result');
+  el.hidden = false;
+  el.textContent = T('Rielaborazione in corso…');
+  try {
+    var d = await (await fetch('/api/replay/' + encodeURIComponent(fname), {method: 'POST'})).json();
+    if (!d.ok) { el.textContent = T('Errore: {msg}', {msg: d.error}); return; }
+    var out = '';
+    (d.steps || []).forEach(function (s) {
+      out += '\n[' + s.step + '] ' + s.label + '\n';
+      Object.keys(s).forEach(function (k) {
+        if (k === 'step' || k === 'label') return;
+        out += '  ' + k + ': ' + (typeof s[k] === 'string' ? s[k] : JSON.stringify(s[k])) + '\n';
+      });
+    });
+    if (d.hl7_out) out += '\n\n=== HL7 ===\n' + d.hl7_out.replace(/\r/g, '\n');
+    el.textContent = out.trim();
+  } catch (e) { el.textContent = T('Errore di rete: {msg}', {msg: e.message || e}); }
+}
+</script>
+{% endblock %}

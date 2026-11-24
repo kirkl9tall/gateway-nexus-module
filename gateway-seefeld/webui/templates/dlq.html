@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Da rispedire") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<div class="tp-head">
+  <div>
+    <h1 class="page-h1">{{ t("Risultati da rispedire") }}</h1>
+    <p class="page-desc">{{ t("Risultati che il gateway non è riuscito a consegnare dopo tutti i tentativi. Sono conservati: rispediscili quando il software dello studio è di nuovo raggiungibile.") }}</p>
+  </div>
+  <button class="btn btn-primary btn-lg" id="btn-resend-sel" onclick="resendSelected()" hidden></button>
+</div>
+
+<div id="dlq-container"><p class="ck-running"><span class="ck-spinner"></span>{{ t("Carico…") }}</p></div>
+
+<script>
+var _entries = [], _sel = {};
+
+// Reads a response that SHOULD be JSON without blowing up if it is not.
+// When the server answers with an HTML error page, r.json() throws
+// "SyntaxError: The string did not match the expected pattern", which hides
+// the real cause. Show the status code and the start of the answer instead.
+async function _leggiJson(r) {
+  const testo = await r.text();
+  try {
+    return JSON.parse(testo);
+  } catch (e) {
+    const estratto = testo.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 160);
+    return {ok: false,
+            error: T('il server ha risposto {codice}', {codice: r.status + ' ' + r.statusText}) +
+                   (estratto ? ' — ' + estratto : '')};
+  }
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+    return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c];
+  });
+}
+
+function fmtTs(ts) {
+  var d = new Date(ts);
+  if (!ts || isNaN(d.getTime())) return {ora: esc(ts || '—'), data: ''};
+  return {ora: d.toLocaleTimeString(window.I18N_LOCALE, {hour: '2-digit', minute: '2-digit'}),
+          data: d.toLocaleDateString(window.I18N_LOCALE)};
+}
+
+// Rejected by the practice software (bad data) vs. not reachable (network).
+function isReject(reason) { return /reject|rifiut|AR\b|AE\b|nack/i.test(reason || ''); }
+
+async function loadDlq() {
+  try {
+    const r = await fetch('/api/dlq?limit=200');
+    const d = await _leggiJson(r);
+    _entries = d.entries || [];
+    var keep = {};
+    _entries.forEach(function (e) { keep[e.control_id] = _sel[e.control_id] !== false; });
+    _sel = keep;
+    render();
+  } catch (e) {
+    document.getElementById('dlq-container').innerHTML =
+      '<p class="ov-empty">' + esc(T('Errore di rete: {msg}', {msg: e.message || e})) + '</p>';
+  }
+}
+
+function selectedIds() {
+  return _entries.filter(function (e) { return _sel[e.control_id]; }).map(function (e) { return e.control_id; });
+}
+
+function updateSelBtn() {
+  var n = selectedIds().length, b = document.getElementById('btn-resend-sel');
+  b.hidden = !_entries.length;
+  b.disabled = n === 0;
+  b.textContent = n === _entries.length ? T('Rispedisci tutti ({n})', {n: n}) : T('Rispedisci selezionati ({n})', {n: n});
+}
+
+function render() {
+  const c = document.getElementById('dlq-container');
+  if (!_entries.length) {
+    c.innerHTML = '<section class="ov-head good"><div class="ov-head-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div class="ov-head-text"><h1>' + esc(T('Nessun risultato da rispedire.')) +
+                  '</h1><p>' + esc(T('Tutti i risultati sono stati recapitati.')) + '</p></div></section>';
+    updateSelBtn();
+    return;
+  }
+  var all = selectedIds().length === _entries.length;
+  var html = '<label class="tp-selall"><input type="checkbox" ' + (all ? 'checked' : '') +
+             ' onchange="toggleAll(this.checked)"> ' + esc(T('Seleziona tutti')) + '</label><ul class="rs-list">';
+  _entries.forEach(function (e) {
+    var cid = esc(e.control_id), when = fmtTs(e.ts), rej = isReject(e.reason);
+    html += '<li class="tp-item ' + (rej ? 'critical' : 'warning') + '">' +
+      '<label class="tp-check"><input type="checkbox" ' + (_sel[e.control_id] ? 'checked' : '') +
+        ' onchange="toggleOne(\'' + cid + '\', this.checked)" aria-label="' + esc(T('Seleziona')) + '"></label>' +
+      '<span class="rs-when"><b>' + when.ora + '</b><small>' + when.data + '</small></span>' +
+      '<span class="rs-who"><small>' + esc(T('Campione')) + '</small><b>' + esc(e.sample_id || '—') + '</b></span>' +
+      '<span class="rs-what"><b>' + esc(e.device || '—') + '</b><small>' + esc(T('per {dest}', {dest: (e.targets || []).join(', ') || '—'})) + '</small></span>' +
+      '<span class="tp-reason"><span class="chip ' + (rej ? 'critical' : 'warning') + '">' +
+        esc(rej ? T('Rifiutato dal software') : T('Non raggiungibile')) + '</span><small>' + esc(e.reason || '') + '</small></span>' +
+      '<span class="tp-actions">' +
+        '<button class="btn" onclick="viewDlq(\'' + cid + '\', this)">' + esc(T('Mostra messaggio')) + '</button>' +
+        '<button class="btn btn-primary" onclick="replayDlq(\'' + cid + '\')">' + esc(T('Rispedisci')) + '</button>' +
+      '</span>' +
+      '<pre class="rd-hl7 tp-preview" id="pv-' + cid + '" hidden></pre></li>';
+  });
+  c.innerHTML = html + '</ul>';
+  updateSelBtn();
+}
+
+function toggleAll(on) { _entries.forEach(function (e) { _sel[e.control_id] = on; }); render(); }
+function toggleOne(cid, on) { _sel[cid] = on; render(); }
+
+async function viewDlq(cid, btn) {
+  const el = document.getElementById('pv-' + cid);
+  if (!el.hidden) { el.hidden = true; btn.textContent = T('Mostra messaggio'); return; }
+  try {
+    const d = await _leggiJson(await fetch('/api/dlq/' + cid));
+    if (d.ok) { el.textContent = (d.hl7 || '').replace(/\r/g, '\n'); el.hidden = false; btn.textContent = T('Nascondi'); }
+    else toast(d.error || T('operazione non riuscita'), 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+
+async function replayOne(cid) {
+  return _leggiJson(await fetch('/api/dlq/' + cid + '/replay', {method: 'POST'}));
+}
+
+async function replayDlq(cid) {
+  if (!confirm(T('Rispedire questo risultato? Se il software dello studio lo aveva già ricevuto, potrebbe comparire due volte.'))) return;
+  try {
+    const d = await replayOne(cid);
+    if (d.ok) toast(T('Rispedito a {dest}', {dest: ((d.summary && d.summary.succeeded) || []).join(', ')}), 'success');
+    else toast(T('Non rispedito: {msg}', {msg: d.error || T('operazione non riuscita')}), 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+  loadDlq();
+}
+
+async function resendSelected() {
+  var ids = selectedIds();
+  if (!ids.length) return;
+  if (!confirm(T('Rispedire {n} risultati? Se il software dello studio li aveva già ricevuti, potrebbero comparire due volte.', {n: ids.length}))) return;
+  var ok = 0, fail = 0, motivi = [];
+  for (const cid of ids) {
+    try {
+      const d = await replayOne(cid);
+      if (d.ok) { ok++; } else { fail++; if (d.error) motivi.push(d.error); }
+    } catch (e) { fail++; motivi.push(String(e && e.message || e)); }
+  }
+  // The reason of the first failure, not just a count: eleven "failed"
+  // without an explanation do not tell where to start.
+  var msg = T('{n} rispediti', {n: ok});
+  if (fail) {
+    msg += ', ' + T('{n} non riusciti', {n: fail});
+    if (motivi.length) msg += ' — ' + motivi[0];
+  }
+  toast(msg, fail ? 'error' : 'success');
+  loadDlq();
+}
+
+loadDlq();
+setInterval(loadDlq, 30000);
+</script>
+{% endblock %}

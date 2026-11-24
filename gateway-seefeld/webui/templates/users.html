@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Utenti") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<h1 class="page-h1">{{ t("Utenti") }}</h1>
+<p class="page-desc">{{ t("Chi può aprire il pannello e cosa può fare. Il ruolo decide quali pagine vede.") }}</p>
+
+<section class="card">
+  <div class="card-header"><div class="card-title">{{ t("Utenti esistenti") }}</div></div>
+  <div id="users-list"><p class="tz-empty">{{ t("Carico…") }}</p></div>
+</section>
+
+<section class="card" style="max-width:640px;">
+  <div class="card-header"><div class="card-title">{{ t("Nuovo utente") }}</div></div>
+  <div class="df-grid">
+    <div><label class="form-label" for="new-name">{{ t("Nome utente") }}</label>
+      <input class="form-control" type="text" id="new-name" placeholder="dr.rossi" autocomplete="off">
+      <p class="df-help">{{ t("2-32 caratteri: lettere, numeri, . _ -") }}</p></div>
+    <div><label class="form-label" for="new-pass">{{ t("Password") }}</label>
+      <input class="form-control" type="password" id="new-pass" minlength="12" autocomplete="new-password">
+      <p class="df-help">{{ t("Almeno 12 caratteri.") }}</p></div>
+  </div>
+  <label class="form-label" for="new-role">{{ t("Ruolo") }}</label>
+  <select class="form-control" id="new-role" style="max-width:420px;margin-bottom:16px;">
+    <option value="viewer">{{ t("Medico o assistente — vede tutto, non cambia niente") }}</option>
+    <option value="operator">{{ t("Studio — può anche rispedire i risultati e riavviare") }}</option>
+    <option value="admin">{{ t("Tecnico — accesso completo") }}</option>
+  </select>
+  <div><button class="btn btn-primary" onclick="createUser()">{{ t("Crea utente") }}</button></div>
+</section>
+
+<!-- Two-factor login enrolment -->
+<div class="rs-overlay" id="totp-overlay" hidden></div>
+<div class="tp-modal" id="totp-modal" role="dialog" aria-modal="true" aria-labelledby="totp-title" hidden>
+  <h2 id="totp-title">{{ t("Accesso con codice (2FA)") }} — <span id="totp-user"></span></h2>
+  <p class="df-help">{{ t("Scansiona il codice QR con un'app di autenticazione (Google Authenticator, Microsoft Authenticator, Aegis…) e scrivi il primo codice a 6 cifre per confermare.") }}</p>
+  <div style="text-align:center;margin:14px 0;">
+    <img id="totp-qr" src="" alt="QR" style="max-width:220px;background:#fff;padding:8px;border-radius:8px;">
+    <div id="totp-secret" class="mono tz-note" style="margin-top:8px;word-break:break-all;"></div>
+  </div>
+  <label class="form-label" for="totp-code">{{ t("Codice a 6 cifre") }}</label>
+  <input id="totp-code" class="form-control df-big-input" type="text" inputmode="numeric" pattern="[0-9]{6}"
+         maxlength="6" autocomplete="one-time-code" style="letter-spacing:.3em;text-align:center;max-width:none;">
+  <div class="df-actions" style="margin:16px 0 0;">
+    <button class="btn" onclick="closeTotp()">{{ t("Annulla") }}</button>
+    <button class="btn btn-primary" onclick="confirmTotp()">{{ t("Conferma") }}</button>
+  </div>
+</div>
+
+<script>
+var CURRENT_USER = '';
+var ROLE = {viewer: T('Medico o assistente'), operator: T('Studio'), admin: T('Tecnico')};
+var ROLE_LEVEL = {viewer: 'neutral', operator: 'warning', admin: 'critical'};
+function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+async function loadUsers() {
+  var el = document.getElementById('users-list');
+  try {
+    var d = await (await fetch('/api/users')).json();
+    CURRENT_USER = (d.current || {}).name || '';
+    var users = d.users || [];
+    if (!users.length) { el.innerHTML = '<p class="tz-empty">' + esc(T('Nessun utente.')) + '</p>'; return; }
+    var totp = {};
+    await Promise.all(users.map(async function (u) {
+      try { totp[u.name] = !!(await (await fetch('/api/users/' + encodeURIComponent(u.name) + '/totp/status')).json()).enabled; }
+      catch (_) { totp[u.name] = false; }
+    }));
+    var html = '<div class="tz-table-wrap"><table class="tz-table"><thead><tr><th>' + esc(T('Utente')) + '</th><th>' +
+               esc(T('Ruolo')) + '</th><th>' + esc(T('Accesso con codice (2FA)')) + '</th><th><span class="tz-sr">' +
+               esc(T('Azioni')) + '</span></th></tr></thead><tbody>';
+    users.forEach(function (u) {
+      var me = u.name === CURRENT_USER, n = esc(u.name), on = !!totp[u.name];
+      var otpBtn = on
+        ? '<button class="btn" data-u="' + n + '" onclick="disableTotp(this.dataset.u)">' + esc(T('Disattiva 2FA')) + '</button>'
+        : '<button class="btn" data-u="' + n + '" onclick="enrollTotp(this.dataset.u)">' + esc(T('Attiva 2FA')) + '</button>';
+      var roleCell = me
+        ? '<span class="chip ' + ROLE_LEVEL[u.role] + '">' + esc(ROLE[u.role] || u.role) + '</span>'
+        : '<select class="form-control" style="min-width:200px;" data-u="' + n + '" onchange="setRole(this.dataset.u, this.value)">' +
+            ['viewer', 'operator', 'admin'].map(function (r) {
+              return '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + esc(ROLE[r]) + '</option>';
+            }).join('') + '</select>';
+      html += '<tr><td><strong>' + n + '</strong>' + (me ? '<small>' + esc(T('sei tu')) + '</small>' : '') + '</td>' +
+        '<td>' + roleCell + '</td>' +
+        '<td>' + (on ? '<span class="chip good">' + esc(T('Attivo')) + '</span>' : '<span class="chip neutral">' + esc(T('Spento')) + '</span>') + '</td>' +
+        '<td><div class="tz-actions">' + otpBtn + (me ? '' :
+          '<button class="btn" data-u="' + n + '" onclick="resetPassword(this.dataset.u)">' + esc(T('Nuova password')) + '</button>' +
+          '<button class="btn btn-danger" data-u="' + n + '" onclick="delUser(this.dataset.u)">' + esc(T('Elimina')) + '</button>') +
+        '</div></td></tr>';
+    });
+    el.innerHTML = html + '</tbody></table></div>';
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+
+async function _post(url, body) {
+  var r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body || {})});
+  return r.json();
+}
+
+async function resetPassword(name) {
+  var pw = prompt(T('Nuova password per {nome} (almeno 12 caratteri):', {nome: name}));
+  if (pw === null) return;
+  if (pw.length < 12) { toast(T('Password troppo corta: almeno 12 caratteri.'), 'error'); return; }
+  try {
+    var d = await _post('/api/users/' + encodeURIComponent(name) + '/password', {password: pw});
+    toast(d.ok ? T('Password cambiata per {nome}.', {nome: name}) : (d.error || T('operazione non riuscita')), d.ok ? 'success' : 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+
+var _totpActiveUser = null;
+function _modal(show) {
+  document.getElementById('totp-modal').hidden = !show;
+  document.getElementById('totp-overlay').hidden = !show;
+}
+async function enrollTotp(name) {
+  try {
+    var d = await _post('/api/users/' + encodeURIComponent(name) + '/totp/enroll');
+    if (!d.ok) { toast(d.error || T('operazione non riuscita'), 'error'); return; }
+    _totpActiveUser = name;
+    document.getElementById('totp-user').textContent = name;
+    document.getElementById('totp-secret').textContent = T('Chiave: {chiave}', {chiave: d.secret});
+    var qr = document.getElementById('totp-qr');
+    qr.hidden = !d.qr; if (d.qr) qr.src = d.qr;
+    document.getElementById('totp-code').value = '';
+    _modal(true);
+    document.getElementById('totp-code').focus();
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+async function confirmTotp() {
+  var code = document.getElementById('totp-code').value.trim();
+  if (!/^\d{6}$/.test(code)) { toast(T('Scrivi il codice a 6 cifre.'), 'error'); return; }
+  try {
+    var d = await _post('/api/users/' + encodeURIComponent(_totpActiveUser) + '/totp/verify', {code: code});
+    if (d.ok) { toast(T('2FA attivata per {nome}.', {nome: _totpActiveUser}), 'success'); closeTotp(); loadUsers(); }
+    else toast(d.error || T('operazione non riuscita'), 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+function closeTotp() { _modal(false); _totpActiveUser = null; }
+document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && _totpActiveUser) closeTotp(); });
+
+async function disableTotp(name) {
+  if (!confirm(T('Disattivare la 2FA per {nome}?', {nome: name}))) return;
+  try {
+    var d = await _post('/api/users/' + encodeURIComponent(name) + '/totp/disable');
+    if (d.ok) { toast(T('2FA disattivata.'), 'success'); loadUsers(); } else toast(d.error || T('operazione non riuscita'), 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+
+async function createUser() {
+  var name = document.getElementById('new-name').value.trim();
+  var password = document.getElementById('new-pass').value;
+  var role = document.getElementById('new-role').value;
+  if (!name || password.length < 12) { toast(T('Scrivi un nome e una password di almeno 12 caratteri.'), 'error'); return; }
+  try {
+    var d = await _post('/api/users', {name: name, password: password, role: role});
+    if (d.ok) {
+      toast(T('Utente creato.'), 'success');
+      document.getElementById('new-name').value = ''; document.getElementById('new-pass').value = '';
+      loadUsers();
+    } else toast(d.error || T('operazione non riuscita'), 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+
+async function delUser(name) {
+  if (!confirm(T('Eliminare l\'utente {nome}?', {nome: name}))) return;
+  try {
+    var d = await (await fetch('/api/users/' + encodeURIComponent(name), {method: 'DELETE'})).json();
+    if (d.ok) { toast(T('Utente eliminato.'), 'success'); loadUsers(); } else toast(d.error || T('operazione non riuscita'), 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+
+async function setRole(name, role) {
+  try {
+    var d = await _post('/api/users/' + encodeURIComponent(name) + '/role', {role: role});
+    if (d.ok) toast(T('Ruolo aggiornato.'), 'success'); else { toast(d.error || T('operazione non riuscita'), 'error'); loadUsers(); }
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+
+loadUsers();
+</script>
+{% endblock %}

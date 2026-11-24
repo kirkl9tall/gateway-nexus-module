@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+{% block title %}Frame Inspector — {{ sample_id }}{% endblock %}
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<style>
+.fi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; margin-bottom: 20px; }
+.fi-grid > .card { margin: 0; }
+.tz-table tr.changed { background: var(--warn-tint); }
+.fi-hex { font-family: var(--mono); font-size: 0.8rem; background: var(--page); padding: 10px; border-radius: 8px; word-break: break-all; line-height: 1.5; }
+.fi-meta { display: flex; flex-wrap: wrap; gap: 10px 28px; margin-bottom: 20px; }
+.fi-meta dt { color: var(--ink-3); font-size: 0.88rem; }
+.fi-meta dd { font-weight: 700; }
+</style>
+
+<p><a href="{{ url_for('inspect.inspect_index') }}">← {{ t("Tutti i campioni") }}</a></p>
+<div class="tp-head">
+  <div>
+    <h1 class="page-h1">Frame Inspector <span class="mono" style="font-weight:400;color:var(--ink-3);">{{ sample_id }}</span></h1>
+  </div>
+  {% if data %}
+  <a class="btn" href="{{ url_for('inspect.api_sample_audit_download', sample_id=sample_id) }}" download>{{ t("Scarica JSON") }}</a>
+  {% endif %}
+</div>
+
+{% if not data %}
+<p class="ov-empty">{{ t("Nessun confronto salvato per questo campione. È disponibile solo per i campioni ricevuti con il gateway 1.3.0 o successivo.") }}</p>
+{% else %}
+{% set a = data.audit %}
+
+<dl class="fi-meta">
+  <div><dt>{{ t("Ricevuto") }}</dt><dd>{{ data.ts or '—' }}</dd></div>
+  <div><dt>{{ t("Apparecchio") }}</dt><dd>{{ data.device or '—' }}</dd></div>
+  <div><dt>{{ t("Stato") }}</dt><dd>{{ data.status or '—' }}</dd></div>
+  <div><dt>{{ t("Valori") }}</dt><dd>{{ a.changes|length }}</dd></div>
+  <div><dt>{{ t("Avvisi") }}</dt><dd>{{ a.warnings|length if a.warnings else 0 }}</dd></div>
+</dl>
+
+{% if a.warnings %}
+<div class="alert alert-warn">
+  <div><strong>{{ t("Avvisi di conversione") }}</strong>
+    <ul style="margin:6px 0 0;padding-left:20px;">{% for w in a.warnings %}<li class="mono">{{ w }}</li>{% endfor %}</ul>
+  </div>
+</div>
+{% endif %}
+
+<div class="fi-grid">
+  <section class="card">
+    <div class="card-header"><div class="card-title">{{ t("Campione e paziente") }}</div></div>
+    <table class="tz-table">
+      <thead><tr><th></th><th>{{ t("Dall'apparecchio") }}</th><th>{{ t("Inviato") }}</th></tr></thead>
+      <tbody>
+        <tr {% if a.sample.raw != a.sample.sent %}class="changed"{% endif %}><td>{{ t("Campione") }}</td><td class="mono">{{ a.sample.raw }}</td><td class="mono">{{ a.sample.sent }}</td></tr>
+        <tr {% if a.patient.raw != a.patient.sent %}class="changed"{% endif %}><td>{{ t("Paziente") }}</td><td class="mono">{{ a.patient.raw }}</td><td class="mono">{{ a.patient.sent }}</td></tr>
+      </tbody>
+    </table>
+  </section>
+  <section class="card">
+    <div class="card-header"><div class="card-title">{{ t("Prova di ciò che è arrivato") }}</div></div>
+    <dl class="fi-meta" style="margin-bottom:10px;">
+      <div><dt>SHA-256</dt><dd class="mono" style="word-break:break-all;font-weight:400;">{{ a.raw_payload_sha }}</dd></div>
+      <div><dt>{{ t("Controllo creato") }}</dt><dd>{{ a.audited_at }}</dd></div>
+    </dl>
+    <p class="tz-note">{{ t("Primi 256 byte (esadecimale)") }}</p>
+    <div class="fi-hex">{{ a.raw_payload_hex }}</div>
+  </section>
+</div>
+
+<section class="card">
+  <div class="card-header"><div class="card-title">{{ t("Valore per valore: dall'apparecchio → inviato") }}</div></div>
+  <div class="tz-table-wrap">
+  <table class="tz-table">
+    <thead><tr>
+      <th>{{ t("Codice") }}</th><th>{{ t("Valore dall'apparecchio") }}</th><th>{{ t("Valore inviato") }}</th>
+      <th>{{ t("Unità dall'apparecchio") }}</th><th>{{ t("Unità inviata") }}</th><th>{{ t("Trasformazioni") }}</th>
+    </tr></thead>
+    <tbody>
+    {% for c in a.changes %}
+      <tr {% if c.changed %}class="changed"{% endif %}>
+        <td class="mono"><b>{{ c.sent.code }}</b>{% if c.raw.code != c.sent.code %}<small>{{ c.raw.code }}</small>{% endif %}</td>
+        <td class="mono">{{ c.raw.value }}</td>
+        <td class="mono">{{ c.sent.value }}</td>
+        <td class="mono">{{ c.raw.unit or '—' }}</td>
+        <td class="mono">{{ c.sent.unit or '—' }}</td>
+        <td>{% if c.transforms %}{% for tr in c.transforms %}<code>{{ tr }}</code>{% if not loop.last %}<br>{% endif %}{% endfor %}{% else %}—{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  <p class="rd-note" style="margin-top:12px;">{{ t("Le righe evidenziate sono state trasformate dal gateway (unità o codice) prima dell'invio. L'SHA-256 è la prova di ciò che l'apparecchio ha inviato davvero.") }}</p>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Frame Inspector — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+
+{% block content %}
+<h1 class="page-h1">Frame Inspector</h1>
+<p class="page-desc">{{ t("Confronta ciò che l'apparecchio ha inviato con ciò che il gateway ha consegnato al software dello studio, valore per valore.") }}</p>
+
+<form class="df-search rs-search" style="margin-bottom:20px;" onsubmit="location.href='/inspect/' + encodeURIComponent(document.getElementById('sid').value.trim()); return false;">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+  <input id="sid" type="search" placeholder="{{ t('ID del campione, per esempio SN0042') }}" aria-label="{{ t('ID del campione, per esempio SN0042') }}" autofocus>
+  <button class="btn btn-primary" type="submit">{{ t("Ispeziona") }}</button>
+</form>
+
+<section class="card">
+  <div class="card-header"><div class="card-title">{{ t("Ultimi 25 campioni") }}</div></div>
+  {% if recent %}
+  <div class="tz-table-wrap">
+  <table class="tz-table">
+    <thead><tr>
+      <th>{{ t("Ricevuto") }}</th><th>{{ t("Apparecchio") }}</th><th>{{ t("Campione") }}</th>
+      <th>{{ t("Paziente") }}</th><th>{{ t("Valori") }}</th><th>{{ t("Stato") }}</th><th><span class="tz-sr">{{ t("Azioni") }}</span></th>
+    </tr></thead>
+    <tbody>
+    {% for r in recent %}
+      <tr>
+        <td class="mono">{{ (r.ts or '')[:19]|replace('T', ' ') }}</td>
+        <td>{{ r.device }}</td>
+        <td><a class="mono" href="{{ url_for('inspect.inspect_sample', sample_id=r.sample_id) }}">{{ r.sample_id }}</a></td>
+        <td>{{ r.patient_id }}</td>
+        <td>{{ r.analytes }}</td>
+        <td>
+          {% if r.status == 'OK' %}<span class="chip good">{{ t("Recapitato") }}</span>
+          {% elif r.status == 'PARZIALE' %}<span class="chip warning">{{ t("Inviato in parte") }}</span>
+          {% else %}<span class="chip critical">{{ t("Non inviato") }}</span>{% endif %}
+        </td>
+        <td><div class="tz-actions">
+          <a class="btn" href="{{ url_for('inspect.inspect_sample', sample_id=r.sample_id) }}">{{ t("Apri") }}</a>
+          {% if r.sample_id %}<button class="btn" data-sid="{{ r.sample_id }}" onclick="resendSample(this)">{{ t("Rispedisci") }}</button>{% endif %}
+        </div></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% else %}
+  <p class="tz-empty">{{ t("Nessun risultato nel database.") }}</p>
+  {% endif %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Re-dispatch a sample the practice software never picked up. The server
+// decides whether to rebuild the message with the current config or resend
+// the exact original bytes, and says which in `mode`.
+async function resendSample(btn) {
+  var sid = btn.dataset.sid;
+  if (!confirm(T('Rispedire il campione {id} al software dello studio?', {id: sid}))) return;
+  var original = btn.textContent.trim();
+  btn.disabled = true;
+  btn.textContent = T('Invio…');
+  try {
+    var r = await fetch('/api/sample/' + encodeURIComponent(sid) + '/resend', {
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+    var d = await r.json();
+    if (d.ok) {
+      var dest = ((d.summary && d.summary.succeeded) || []).join(', ');
+      toast(T('Campione {id} rispedito a {dest}', {id: sid, dest: dest}) +
+            (d.mode === 'verbatim' ? ' (' + T('copia originale') + ')' : ''), 'success');
+      btn.textContent = T('Inviato');
+      return;
+    }
+    var err = d.error || Object.values((d.summary && d.summary.errors) || {}).join('; ') || T('sconosciuto');
+    toast(T('Non rispedito: {msg}', {msg: err}), 'error');
+  } catch (e) {
+    toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = original;
+}
+</script>
+{% endblock %}

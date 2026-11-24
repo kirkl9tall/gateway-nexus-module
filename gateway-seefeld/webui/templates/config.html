@@ -1,0 +1,534 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Configurazione") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+
+{% block content %}
+
+<h1 class="page-h1">{{ t("Configurazione") }}</h1>
+<p class="page-desc">{{ t("Impostazioni del gateway: collegamento del LOC-200, identità dei referti, software dello studio e apparecchi. Le modifiche valgono dopo «Salva configurazione».") }}</p>
+<div id="alert-area"></div>
+
+<!-- Connection type wizard -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      <span class="df-num">1</span>{{ t("Collegamento del LOC-200") }}
+    </div>
+  </div>
+  <div class="conn-cards">
+    <div class="conn-card" id="conn-serial" onclick="selectConn('serial')">
+      <div class="label">{{ t("Cavo USB") }}</div>
+      <div class="desc">{{ t("Cavo seriale con adattatore USB al gateway") }}</div>
+    </div>
+    <div class="conn-card" id="conn-network" onclick="selectConn('network')">
+      <div class="label">{{ t("Cavo di rete") }}</div>
+      <div class="desc">{{ t("Il LOC-200 invia al gateway attraverso la rete dello studio") }}</div>
+    </div>
+  </div>
+
+  <div id="params-serial" class="conn-params" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+      <div class="form-group">
+        <label class="form-label">{{ t("Percorso seriale") }}</label>
+        <input class="form-control mono" id="serial-port" value="{{ cfg_serial_port }}" placeholder="/dev/ttyUSB0">
+        <div class="df-help">{{ t("Verifica con: ls /dev/ttyUSB*") }}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ t("Velocità seriale (baud)") }}</label>
+        <select class="form-control" id="serial-baud">
+          <option value="9600"   {% if cfg_serial_baud|string == '9600'   %}selected{% endif %}>9600</option>
+          <option value="19200"  {% if cfg_serial_baud|string == '19200'  %}selected{% endif %}>19200</option>
+          <option value="38400"  {% if cfg_serial_baud|string == '38400'  %}selected{% endif %}>38400</option>
+          <option value="115200" {% if cfg_serial_baud|string == '115200' %}selected{% endif %}>115200</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ t("Parità") }}</label>
+        <select class="form-control" id="serial-parity">
+          <option value="N" {% if cfg_serial_parity == 'N' %}selected{% endif %}>{{ t("Nessuna") }} (N)</option>
+          <option value="E" {% if cfg_serial_parity == 'E' %}selected{% endif %}>{{ t("Pari") }} (E)</option>
+          <option value="O" {% if cfg_serial_parity == 'O' %}selected{% endif %}>{{ t("Dispari") }} (O)</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="params-network" class="conn-params" style="display:none;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="form-group">
+        <label class="form-label">{{ t("Porta HTTP del gateway") }}</label>
+        <input class="form-control mono" id="net-port" value="{{ cfg_http_port }}" placeholder="5003">
+        <div class="df-help">{{ t("Il LOC-200 deve inviare a: http://{indirizzo}:{porta}", indirizzo="<IP>", porta=cfg_http_port) }}</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">{{ t("Indirizzo del gateway (informazione)") }}</label>
+        <input class="form-control mono" id="net-host" value="192.168.10.1" readonly style="opacity:0.6;">
+        <div class="df-help">{{ t("Indirizzo fisso del cavo di rete: non modificare") }}</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HL7 identity -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span class="df-num">2</span>{{ t("Identità dei referti (HL7)") }}
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+    <div class="form-group">
+      <label class="form-label">{{ t("Nome dello studio") }} <span class="mono">MSH-4</span></label>
+      <input class="form-control" id="hl7-facility" value="{{ cfg_sending_facility }}" placeholder="es. Altstetten">
+      <div class="df-help">{{ t("Da dove parte il referto.") }}</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ t("Destinatario del referto") }} <span class="mono">MSH-6</span></label>
+      <input class="form-control" id="hl7-recv-facility" value="{{ cfg_receiving_facility }}" placeholder="es. Dr. A Rossi">
+      <div class="df-help">{{ t("A chi è indirizzato. Il software dello studio lo usa per riconoscere i referti: se cambia, smette di assegnarli ai pazienti.") }}</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">{{ t("Applicazione mittente") }} <span class="mono">MSH-3</span></label>
+      <input class="form-control mono" id="hl7-app" value="{{ cfg_sending_app }}">
+      <div class="df-help">{{ t("Usata solo per gli apparecchi senza nome proprio.") }}</div>
+    </div>
+  </div>
+
+  {# Questi tre campi esistevano solo in gateway.yaml e si potevano cambiare
+     unicamente a mano sul Raspberry. include_timezone e' stato uno dei tre
+     fattori del blackout su Tomedo: aggiungeva +0200 ai timestamp e il
+     gestionale smetteva di riconoscere i referti. Un valore che puo'
+     fermare le consegne non deve essere invisibile. #}
+  <div style="display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--border);">
+    <div class="form-group" style="margin:0;">
+      <label class="form-label">{{ t("Versione HL7") }} <span class="mono">MSH-12</span></label>
+      <select class="form-control mono" id="hl7-version">
+        {% for v in ['2.2', '2.3', '2.3.1', '2.4', '2.5'] %}
+        <option value="{{ v }}" {% if cfg_hl7_version == v %}selected{% endif %}>{{ v }}</option>
+        {% endfor %}
+      </select>
+      <div class="df-help">{{ t("Quasi tutti i software di studio svizzeri usano 2.3.") }}</div>
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label class="form-label">{{ t("Codifica dei caratteri") }} <span class="mono">MSH-18</span></label>
+      <select class="form-control mono" id="hl7-charset">
+        {% for c in ['8859/1', 'UNICODE UTF-8', 'ASCII'] %}
+        <option value="{{ c }}" {% if cfg_hl7_charset == c %}selected{% endif %}>{{ c }}</option>
+        {% endfor %}
+      </select>
+      <div class="df-help">{{ t("Se sbagliata, umlaut e µ arrivano illeggibili.") }}</div>
+    </div>
+    <div class="form-group" style="margin:0;">
+      <label class="form-label">{{ t("Fuso orario nelle date") }}</label>
+      <label class="toggle" style="margin-top:6px;">
+        <input type="checkbox" id="hl7-timezone" {% if cfg_hl7_timezone %}checked{% endif %}>
+        <span class="toggle-slider"></span>
+      </label>
+      <div class="df-help">{{ t("Aggiunge +0200 alle date. Alcuni software di studio non lo accettano e smettono di assegnare i referti: lascialo spento se non sai che il tuo lo richiede.") }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- PIS targets -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <span class="df-num">3</span>{{ t("Software dello studio") }}
+    </div>
+    <div class="tz-note">{{ t("Attiva uno o più software") }}</div>
+  </div>
+
+  {# La tabella dei gestionali arriva da UI_TARGETS in webui/app.py: una sola
+     definizione per template e JavaScript, che prima erano due e divergevano.
+     `salvato` sono i valori gia' in gateway.yaml per questo gestionale. #}
+  {% for _t in ui_targets %}
+  {% set tid   = _t.id %}
+  {% set tname = _t.label %}
+  {% set tmode = _t.mode %}
+  {% set tport = _t.port %}
+  {% set salvato = cfg_targets.get(tid, {}) %}
+  {% set attivo  = salvato.get('enabled', False) %}
+  <div class="target-row" id="trow-{{ tid }}" style="flex-direction:column;align-items:stretch;gap:10px;">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <label class="toggle">
+        <input type="checkbox" id="t-{{ tid }}-enabled" onchange="toggleTarget('{{ tid }}')"
+               {% if attivo %}checked{% endif %}>
+        <span class="toggle-slider"></span>
+      </label>
+      <div style="flex:1;">
+        <div class="target-name">{{ tname }}</div>
+        <div class="target-type">{{ 'MLLP/TCP' if tmode == 'mllp' else 'SFTP' if tmode == 'sftp' else t('Cartella') }}</div>
+      </div>
+      {% if tmode == 'mllp' %}
+      <div class="tz-note">{{ t("porta predefinita {n}", n=tport) }}</div>
+      {% endif %}
+      <button class="btn" onclick="testTarget('{{ tid }}')">{{ t("Invia un test") }}</button>
+    </div>
+    <div id="t-{{ tid }}-params" style="display:{{ 'block' if attivo else 'none' }};padding:14px;background:var(--page);border-radius:8px;">
+      {% if tmode == 'mllp' %}
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">{{ t("Indirizzo IP del computer con {nome}", nome=tname) }}</label>
+          <input class="form-control mono" id="t-{{ tid }}-host"
+                 value="{{ salvato.get('host', '') }}" placeholder="192.168.1.xx">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">{{ t("Porta MLLP") }}</label>
+          <input class="form-control mono" id="t-{{ tid }}-port"
+                 value="{{ salvato.get('port') or tport }}" placeholder="{{ tport }}">
+        </div>
+      </div>
+      {% elif tmode == 'sftp' %}
+      <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">{{ t("Indirizzo IP del server Tomedo (Mac)") }}</label>
+          <input class="form-control mono" id="t-tomedo-sftp-host" value="{{ cfg_tomedo_sftp_host }}" placeholder="192.168.2.215">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">{{ t("Porta SSH") }}</label>
+          <input class="form-control mono" id="t-tomedo-sftp-port" value="{{ cfg_tomedo_sftp_port }}" placeholder="22">
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:10px;">
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">{{ t("Utente SSH") }}</label>
+          <input class="form-control mono" id="t-tomedo-sftp-user" value="{{ cfg_tomedo_sftp_user }}" placeholder="jerumed">
+        </div>
+        <div class="form-group" style="margin:0;">
+          <label class="form-label">{{ t("Password SSH") }}</label>
+          <input class="form-control mono" id="t-tomedo-sftp-pass" value="{{ cfg_tomedo_sftp_pass }}" placeholder="password">
+        </div>
+      </div>
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">{{ t("Cartella remota") }}</label>
+        <input class="form-control mono" id="t-tomedo-sftp-path" value="{{ cfg_tomedo_sftp_path }}" placeholder="/Users/jerumed/ldt">
+      </div>
+      {% else %}
+      <div class="form-group" style="margin:0;">
+        <label class="form-label">{{ t("Cartella di importazione") }}</label>
+        <input class="form-control mono" id="t-{{ tid }}-folder"
+               value="{{ salvato.get('watch_folder', '') }}"
+               placeholder="//SERVER/Laboreingang">
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Passo 4 — Altri analizzatori (dinamico da config/devices/*.yaml) -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2v-4M9 21H5a2 2 0 0 1-2-2v-4m0 0h18"/></svg>
+      <span class="df-num">4</span>{{ t("Apparecchi") }}
+    </div>
+    <div style="display:flex;align-items:center;gap:10px">
+      <a href="/devices/archive" class="btn">{{ t("Archivio") }}</a>
+      <a href="/devices/new" class="btn btn-primary">{{ t("Aggiungi un apparecchio") }}</a>
+    </div>
+  </div>
+
+  {% if not device_catalog %}
+    <p class="tz-empty">{{ t("Nessun apparecchio nel catalogo.") }} <a href="/devices/new">{{ t("Aggiungi un apparecchio") }}</a></p>
+  {% else %}
+    {% for d in device_catalog %}
+    <div class="target-row" id="dev-{{ d.id }}" style="flex-direction:column;align-items:stretch;gap:8px">
+      <div style="display:flex;align-items:center;gap:12px">
+        <label class="toggle">
+          <input type="checkbox" id="devchk-{{ d.id }}"
+                 {% if d.enabled %}checked{% endif %}
+                 onchange="toggleDevice('{{ d.id }}', this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+        <div style="flex:1">
+          <div class="target-name">
+            {{ d.display_name or d.id }}
+            <span class="chip neutral" style="font-size:0.78rem;padding:1px 10px;margin-left:6px;">{{ t("Cavo USB") if d._transport == 'usb' else t("Cavo di rete") }}</span>
+            {% if d._ambiguo %}
+            <span title="{{ t('Ha sia una porta seriale sia una di ascolto: vale la seriale, la porta di rete resta chiusa.') }}"
+                  class="chip critical" style="font-size:0.78rem;padding:1px 10px;margin-left:4px;">{{ t("collegamento ambiguo") }}</span>
+            {% endif %}
+          </div>
+          <div class="target-type">
+            {{ d.vendor or '' }}{% if d.vendor and d.model %} · {% endif %}{{ d.model or '' }}
+            · <span class="mono">{{ d.type }}</span>
+            {% if d._transport == 'usb' %}
+              · <span class="mono">{{ d.serial_port or '?' }}</span>
+            {% else %}
+              · <span class="mono">{{ d.listen_host or '0.0.0.0' }}:{{ d.listen_port or '?' }}</span>
+            {% endif %}
+          </div>
+        </div>
+        <a href="/devices/edit/{{ d.id }}" class="btn">{{ t("Modifica") }}</a>
+      </div>
+    </div>
+    {% endfor %}
+  {% endif %}
+</div>
+
+<!-- Advanced YAML -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+      {{ t("Configurazione avanzata (YAML)") }}
+    </div>
+    <button class="btn" onclick="toggleYaml()"><span id="yaml-toggle-label">{{ t("Mostra editor") }}</span></button>
+  </div>
+  <div id="yaml-area" style="display:none;">
+    <div class="alert alert-info" style="margin-bottom:12px;">
+      {{ t("Modifica diretta del file di configurazione. Salva solo se conosci il formato YAML.") }}
+    </div>
+    <textarea id="yaml-editor">{{ yaml_content }}</textarea>
+    <div style="display:flex;justify-content:flex-end;margin-top:10px;">
+      <button class="btn" onclick="reloadYaml()" style="margin-right:8px;">{{ t("Ricarica") }}</button>
+      <button class="btn btn-primary" onclick="saveYaml()">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+        {{ t("Salva YAML") }}
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Save button -->
+<div class="df-actions">
+  <a href="/" class="btn">{{ t("Annulla") }}</a>
+  <button class="btn btn-primary btn-lg" onclick="saveWizard()">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    {{ t("Salva configurazione") }}
+  </button>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let selectedConn = 'serial';
+
+function selectConn(type) {
+  // Legacy 'wifi' config folds into 'network' (both = TCP, wired vs wireless is transport-only)
+  if (type === 'wifi' || type === 'http') type = 'network';
+  selectedConn = type;
+  ['serial','network'].forEach(function(t) {
+    const el = document.getElementById('conn-' + t);
+    if (el) el.classList.toggle('selected', t === type);
+  });
+  document.getElementById('params-serial').style.display  = type === 'serial' ? '' : 'none';
+  document.getElementById('params-network').style.display = type === 'network' ? '' : 'none';
+}
+selectConn('{{ cfg_connection_type if cfg_connection_type in ["serial","network"] else "network" }}');
+
+// Pre-seleziona tomedo
+{% if cfg_tomedo_enabled %}
+document.getElementById('t-tomedo-enabled').checked = true;
+toggleTarget('tomedo');
+{% endif %}
+
+function toggleTarget(tid) {
+  var enabled = document.getElementById('t-' + tid + '-enabled').checked;
+  document.getElementById('t-' + tid + '-params').style.display = enabled ? '' : 'none';
+  document.getElementById('trow-' + tid).classList.toggle('enabled', enabled);
+  document.getElementById('trow-' + tid).classList.toggle('disabled', !enabled);
+}
+
+// ── Passo 4: device catalog toggle / delete ──────────────────────
+async function toggleDevice(devId, enabled) {
+  try {
+    const r = await fetch('/api/devices/' + encodeURIComponent(devId) + '/enable', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({enabled: enabled})
+    });
+    const d = await r.json();
+    if (d.ok) toast(devId + ': ' + (d.enabled ? T('attivato') : T('disattivato')), 'success');
+    else {
+      toast(T('Errore: {msg}', {msg: d.error || T('operazione non riuscita')}), 'error');
+      document.getElementById('devchk-' + devId).checked = !enabled;
+    }
+  } catch (e) {
+    toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error');
+    document.getElementById('devchk-' + devId).checked = !enabled;
+  }
+}
+
+// Nota: la cancellazione dei device è stata sostituita dall'archiviazione
+// dalla pagina Modifica (con doppia conferma), per evitare click accidentali.
+
+function toggleYaml() {
+  var area = document.getElementById('yaml-area');
+  var btn  = document.getElementById('yaml-toggle-label');
+  var show = area.style.display === 'none';
+  area.style.display = show ? '' : 'none';
+  btn.textContent    = show ? T('Nascondi editor') : T('Mostra editor');
+}
+
+function _csrfHeader() {
+  var m = document.querySelector('meta[name="csrf-token"]');
+  var h = { 'Content-Type': 'application/json' };
+  if (m && m.content) h['X-CSRF-Token'] = m.content;
+  return h;
+}
+
+async function saveYaml() {
+  var yaml = document.getElementById('yaml-editor').value;
+  var r = await fetch('/api/config', {
+    method: 'POST',
+    headers: _csrfHeader(),
+    body: JSON.stringify({ yaml: yaml })
+  });
+  var d = await r.json();
+  if (d.ok) toast(T('Configurazione salvata.'), 'success');
+  else toast(T('Errore: {msg}', {msg: d.error}), 'error');
+}
+
+async function reloadYaml() {
+  var r = await fetch('/api/config');
+  var d = await r.json();
+  document.getElementById('yaml-editor').value = d.yaml;
+  toast(T('YAML ricaricato.'), 'info');
+}
+
+// ── Save ─────────────────────────────────────────────────────────
+// New in v1.3.1: collect form values into structured JSON and POST to
+// /api/config/save-form. The server merges into the current YAML,
+// validates via Pydantic, writes, and restarts the gateway. No more
+// client-side regex on YAML — that path was fragile and caused all the
+// "YAML syntax error" / "salvataggio fallito" reports.
+
+function _val(id, fallback) {
+  var el = document.getElementById(id);
+  if (!el) return fallback === undefined ? '' : fallback;
+  var v = (el.value !== undefined) ? el.value : '';
+  return v === '' && fallback !== undefined ? fallback : v;
+}
+function _chk(id) {
+  var el = document.getElementById(id);
+  return !!(el && el.checked);
+}
+
+// Stessa tabella che il template usa per disegnare le righe (UI_TARGETS in
+// webui/app.py). Prima era duplicata qui a mano e le due copie divergevano:
+// porte di default diverse, e WinMed disegnato come file-drop ma raccolto come
+// MLLP, quindi la cartella che l'operatore scriveva non arrivava da nessuna
+// parte e il gestionale restava inconfigurabile.
+var _UI_TARGETS = {{ ui_targets|tojson }};
+
+// Per-analyzer enable toggles (legacy per-device config blocks). Same
+// principle: whitelist so an unrelated DOM element can't smuggle a bad
+// key into gateway.yaml.
+var _ANALYZERS = [
+  'sysmex', 'sysmex_xq320', 'sysmex_poch100i', 'horiba',
+  'uc1000', 'seamaty', 'seamaty_sd3', 'seamaty_sd1', 'cobas',
+];
+
+function _collectFormData() {
+  var out = { hl7: {}, loc200: {}, targets: [], devices_enabled: {} };
+
+  // ── HL7 identity ──
+  // I due campi sono DISTINTI: MSH-4 = da chi arriva, MSH-6 = a chi e
+  // indirizzato. Copiare il primo nel secondo cancellava il destinatario e
+  // il gestionale smetteva di assegnare i referti ai pazienti.
+  out.hl7.sending_facility   = _val('hl7-facility').trim();
+  out.hl7.receiving_facility = _val('hl7-recv-facility').trim();
+  out.hl7.sending_application = _val('hl7-app').trim() || 'LOC200_GW';
+  out.hl7.version = _val('hl7-version', '2.3');
+  out.hl7.charset = _val('hl7-charset', '8859/1');
+  // Booleano: va inviato anche quando e' falso, altrimenti il server lo
+  // scarta come "campo vuoto" e spegnerlo dalla pagina non avrebbe effetto.
+  out.hl7.include_timezone = _chk('hl7-timezone');
+
+  // ── LOC-200 connection ──
+  out.loc200.connection_type = (selectedConn === 'serial') ? 'serial' : 'http';
+  out.loc200.http_port = parseInt(_val('net-port', '5003'), 10) || 5003;
+  if (selectedConn === 'serial') {
+    out.loc200.serial_port = _val('serial-port').trim();
+    out.loc200.baudrate    = parseInt(_val('serial-baud', '9600'), 10) || 9600;
+    out.loc200.parity      = _val('serial-parity', 'N');
+  }
+
+  // ── Gestionali destinatari ──
+  // `targets_managed` dice al server quali gestionali questo modulo controlla.
+  // Quelli non elencati restano intatti in gateway.yaml: cosi' un salvataggio
+  // non puo' cancellare un target che la pagina non sa ancora mostrare.
+  out.targets_managed = _UI_TARGETS.map(function(t) { return t.id; });
+
+  _UI_TARGETS.forEach(function(t) {
+    if (!_chk('t-' + t.id + '-enabled')) return;   // deselezionato = rimosso
+    var voce = { name: t.id, type: t.id, enabled: true };
+    if (t.mode === 'sftp') {
+      voce.sftp_host        = _val('t-' + t.id + '-sftp-host').trim();
+      voce.sftp_port        = parseInt(_val('t-' + t.id + '-sftp-port', '22'), 10) || 22;
+      voce.sftp_user        = _val('t-' + t.id + '-sftp-user').trim();
+      // '********' dice al server "tieni la password che hai gia'"
+      voce.sftp_pass        = _val('t-' + t.id + '-sftp-pass');
+      voce.sftp_remote_path = _val('t-' + t.id + '-sftp-path', '/import').trim();
+    } else if (t.mode === 'file') {
+      voce.watch_folder = _val('t-' + t.id + '-folder').trim();
+    } else {
+      voce.host = _val('t-' + t.id + '-host').trim();
+      var porta = parseInt(_val('t-' + t.id + '-port', String(t.port)), 10);
+      voce.port = isNaN(porta) ? t.port : porta;
+    }
+    out.targets.push(voce);
+  });
+
+  // ── Per-analyzer enabled + port ──
+  _ANALYZERS.forEach(function(aid) {
+    var chk = document.getElementById('az-' + aid + '-enabled');
+    if (!chk) return;
+    out.devices_enabled[aid] = !!chk.checked;
+  });
+
+  return out;
+}
+
+async function saveWizard() {
+  var payload = _collectFormData();
+  var r;
+  try {
+    r = await fetch('/api/config/save-form', {
+      method: 'POST',
+      headers: _csrfHeader(),
+      body: JSON.stringify(payload),
+    });
+  } catch (e) {
+    toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error');
+    return;
+  }
+  var d;
+  try { d = await r.json(); } catch (e) {
+    toast(T('Risposta del server non valida (HTTP {codice})', {codice: r.status}), 'error');
+    return;
+  }
+  if (d.ok) {
+    var msg = T('Configurazione salvata.');
+    if (d.restarted) msg += ' ' + T('Il gateway si è riavviato.');
+    toast(msg, 'success');
+    // Refresh the raw editor if it's open so the operator sees the actual
+    // YAML the server persisted.
+    var ed = document.getElementById('yaml-editor');
+    if (ed && d.yaml) ed.value = d.yaml;
+  } else {
+    toast(T('Errore: {msg}', {msg: d.error || T('sconosciuto')}), 'error');
+  }
+}
+
+// ── Test dispatch button ────────────────────────────────────────
+async function testTarget(name) {
+  if (!confirm(T('Inviare un risultato di prova a «{nome}»? Il paziente sarà «TEST Patient» e il campione inizierà con TEST_.', {nome: name}))) return;
+  try {
+    const r = await fetch('/api/targets/' + name + '/test', {method:'POST'});
+    const d = await r.json();
+    if (d.ok) {
+      toast(T('Prova riuscita: {dest}', {dest: (d.summary.succeeded || []).join(', ')}), 'success');
+    } else {
+      const err = d.error || Object.values(d.summary?.errors || {}).join('; ') || T('sconosciuto');
+      toast(T('Prova non riuscita: {msg}', {msg: err}), 'error');
+    }
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+</script>
+{% endblock %}

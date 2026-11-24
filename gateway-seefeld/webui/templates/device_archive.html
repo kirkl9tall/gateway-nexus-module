@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Archivio apparecchi") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<h1 class="page-h1">{{ t("Archivio apparecchi") }}</h1>
+<p class="page-desc">{{ t("Gli apparecchi rimossi restano qui, non vengono cancellati. Puoi rimetterli in uso quando vuoi.") }}</p>
+
+<section class="card">
+  <div id="arch-container"><p class="tz-empty">{{ t("Carico…") }}</p></div>
+</section>
+
+<script>
+function esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+async function load() {
+  var c = document.getElementById('arch-container');
+  try {
+    var d = await (await fetch('/api/devices/archived')).json();
+    var entries = d.entries || [];
+    if (!entries.length) { c.innerHTML = '<p class="tz-empty">' + esc(T('L\'archivio è vuoto.')) + '</p>'; return; }
+    c.innerHTML = '<div class="tz-table-wrap"><table class="tz-table"><thead><tr><th>' + esc(T('Apparecchio')) + '</th><th>' +
+      esc(T('Marca')) + '</th><th>' + esc(T('Protocollo')) + '</th><th>' + esc(T('File')) + '</th><th><span class="tz-sr">' +
+      esc(T('Azioni')) + '</span></th></tr></thead><tbody>' +
+      entries.map(function (e) {
+        return '<tr><td><strong>' + esc(e.display_name || e.id || '—') + '</strong><small>' + esc(e.id || '') + '</small></td>' +
+          '<td>' + esc([e.vendor, e.model].filter(Boolean).join(' ')) + '</td>' +
+          '<td class="mono">' + esc(e.type || '') + '</td>' +
+          '<td class="mono">' + esc(e._file) + '</td>' +
+          '<td><div class="tz-actions"><button class="btn btn-primary" data-f="' + esc(e._file) + '" onclick="restore(this.dataset.f)">' +
+          esc(T('Rimetti in uso')) + '</button></div></td></tr>';
+      }).join('') + '</tbody></table></div>';
+  } catch (e) {
+    c.innerHTML = '<p class="tz-empty">' + esc(T('Errore di rete: {msg}', {msg: e.message || e})) + '</p>';
+  }
+}
+async function restore(filename) {
+  if (!confirm(T('Rimettere in uso «{nome}»?', {nome: filename}))) return;
+  try {
+    var d = await (await fetch('/api/devices/archived/' + encodeURIComponent(filename) + '/restore', {method: 'POST'})).json();
+    if (d.ok) { toast(T('Rimesso in uso: {nome}', {nome: d.restored_as}), 'success'); load(); }
+    else toast(T('Errore: {msg}', {msg: d.error || T('operazione non riuscita')}), 'error');
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message || e}), 'error'); }
+}
+load();
+</script>
+{% endblock %}

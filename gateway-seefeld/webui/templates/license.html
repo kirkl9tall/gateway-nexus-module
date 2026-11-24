@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Licenza") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+
+{% block content %}
+{% from "_ui.html" import chip, status_icon %}
+{% if license.activated %}
+  {% if days_left is not none and days_left <= 0 %}{% set lic = "critical" %}
+  {% elif days_left is not none and days_left <= 30 %}{% set lic = "warning" %}
+  {% else %}{% set lic = "good" %}{% endif %}
+{% else %}
+  {% set lic = "warning" %}
+{% endif %}
+
+<h1 class="page-h1">{{ t("Licenza") }}</h1>
+<p class="page-desc">{{ t("La licenza è legata a questo gateway. Senza licenza valida il gateway continua a funzionare, ma non riceve più aggiornamenti.") }}</p>
+
+<section class="ov-head {{ lic }}">
+  <div class="ov-head-icon">{{ status_icon(lic) }}</div>
+  <div class="ov-head-text">
+    <h1>
+      {%- if not license.activated -%}{{ t("Licenza non ancora attivata.") }}
+      {%- elif lic == 'critical' -%}{{ t("Licenza scaduta.") }}
+      {%- elif lic == 'warning' -%}{{ t("La licenza scade tra {n} giorni.", n=days_left) }}
+      {%- else -%}{{ t("Licenza attiva.") }}{%- endif -%}
+    </h1>
+    <p>
+      {%- if not license.activated -%}{{ t("Il gateway funziona in prova. Inserisci la chiave ricevuta dal rivenditore.") }}
+      {%- elif lic == 'critical' -%}{{ t("Scaduta da {n} giorni. Chiedi al rivenditore una chiave di rinnovo.", n=(days_left|abs) if days_left is not none else '?') }}
+      {%- elif lic == 'warning' -%}{{ t("Scade il {data}. Chiedi per tempo al rivenditore una chiave di rinnovo.", data=license.expires) }}
+      {%- else -%}{{ t("Valida fino al {data}.", data=license.expires) }}{%- endif -%}
+    </p>
+  </div>
+</section>
+
+<div class="fi-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;">
+  <section class="card" style="margin:0;">
+    <div class="card-header"><div class="card-title">{{ t("Questo gateway") }}</div></div>
+    <dl class="rd-meta" style="flex-direction:column;gap:12px;">
+      {% if license.activated %}
+      <div><dt>{{ t("Cliente") }}</dt><dd>{{ license.customer or '—' }}</dd></div>
+      <div><dt>{{ t("Scadenza") }}</dt><dd>{{ license.expires }}{% if days_left is not none and days_left > 0 %} ({{ t("{n} giorni", n=days_left) }}){% endif %}</dd></div>
+      <div><dt>{{ t("Attivata il") }}</dt><dd>{{ license.activated_at[:10] if license.activated_at else '—' }}</dd></div>
+      <div><dt>{{ t("Chiave attiva") }}</dt><dd class="mono" style="word-break:break-all;">{{ license.key }}</dd></div>
+      {% endif %}
+      <div><dt>{{ t("Numero di serie (da dare al rivenditore)") }}</dt><dd class="mono" style="word-break:break-all;">{{ serial }}</dd></div>
+      <div><dt>{{ t("Nome del dispositivo") }}</dt><dd class="mono">{{ hostname }}</dd></div>
+    </dl>
+  </section>
+
+  <section class="card" style="margin:0;">
+    <div class="card-header"><div class="card-title">{{ t("Rinnova la licenza") if license.activated else t("Attiva la licenza") }}</div></div>
+    <ol class="tp-steps">
+      <li>{{ t("Comunica al rivenditore il numero di serie qui accanto.") }}</li>
+      <li>{{ t("Il rivenditore ti invia una chiave.") }}</li>
+      <li>{{ t("Scrivila qui sotto e premi il pulsante. Vale 365 giorni.") }}</li>
+    </ol>
+    <label class="form-label" for="lic-key">{{ t("Chiave di licenza") }}</label>
+    <input class="form-control mono" id="lic-key" placeholder="LOC200-XXXX-XXXX-XXXX-XXXXXXXX" style="letter-spacing:0.08em;font-size:1.05rem;margin-bottom:12px;" autocomplete="off">
+    <label class="form-label" for="lic-customer">{{ t("Nome dello studio") }}</label>
+    <input class="form-control" id="lic-customer" value="{{ license.customer or '' }}" style="margin-bottom:16px;">
+    <div id="lic-alert-area"></div>
+    <button class="btn btn-primary btn-lg" onclick="activateLicense()" style="width:100%;">{{ t("Rinnova") if license.activated else t("Attiva") }}</button>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function _alert(kind, text) {
+  var area = document.getElementById('lic-alert-area');
+  area.textContent = '';
+  var d = document.createElement('div');
+  d.className = 'alert ' + kind;
+  d.textContent = text;            // error text comes from the server: never as HTML
+  area.appendChild(d);
+}
+async function activateLicense() {
+  var key = document.getElementById('lic-key').value.trim().toUpperCase();
+  var customer = document.getElementById('lic-customer').value.trim();
+  if (!key) { _alert('alert-error', T('Scrivi la chiave.')); return; }
+  try {
+    var r = await fetch('/api/license/activate', {method: 'POST', headers: {'Content-Type': 'application/json'},
+                                                   body: JSON.stringify({key: key, customer: customer})});
+    var d = await r.json();
+    if (d.ok) { _alert('alert-success', T('Licenza attivata. Ricarico la pagina…')); setTimeout(function () { location.reload(); }, 1400); }
+    else _alert('alert-error', d.error || T('operazione non riuscita'));
+  } catch (e) { _alert('alert-error', T('Errore di rete: {msg}', {msg: e.message || e})); }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Log e trace") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+{# Due schede invece di due voci di menu: chi indaga un guasto passa di
+   continuo dall'una all'altra -- il log dice COSA e' successo, il trace
+   mostra i byte esatti che sono arrivati dall'apparecchio. Tenerle separate
+   costringeva a navigare avanti e indietro perdendo il contesto. #}
+<style>
+.lt-pannello{display:none}
+.lt-pannello.on{display:block}
+.lt-console{background:var(--surface);color:var(--ink);font-family:var(--mono);font-size:0.8rem;padding:12px;
+  border:1px solid var(--line);border-radius:var(--radius);height:calc(100vh - 380px);min-height:280px;overflow:auto;line-height:1.7}
+.lt-frame{padding:6px 8px;border-bottom:1px solid var(--line);white-space:pre-wrap;word-break:break-all}
+.lt-frame.in{border-left:3px solid var(--brand);padding-left:10px}
+.lt-frame.out{border-left:3px solid var(--warn-fill);padding-left:10px}
+.lt-meta{color:var(--ink-3);font-size:0.75rem}
+.lt-hex{color:var(--ink-3);font-size:0.72rem;display:none}
+.lt-frame:hover .lt-hex{display:block}
+.lt-legend{margin-top:10px;font-size:0.85rem;color:var(--ink-3);display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+.lt-legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+</style>
+
+<h1 class="page-h1">{{ t("Log e trace") }}</h1>
+<p class="page-desc">{{ t("Il log dice cosa è successo. Il trace mostra i byte esatti arrivati dall'apparecchio: serve quando il gateway non registra niente e bisogna capire se qualcosa è arrivato davvero.") }}</p>
+
+<div class="rs-seg tp-tabs" role="tablist">
+  <label><input type="radio" name="lt-tab" id="tab-log" checked onchange="mostraScheda('log')"><span>{{ t("Log di sistema") }}</span></label>
+  <label><input type="radio" name="lt-tab" id="tab-trace" onchange="mostraScheda('trace')"><span>{{ t("Trace protocollo") }}</span></label>
+</div>
+
+<!-- ── Scheda 1: log ──────────────────────────────────────────────── -->
+<div class="lt-pannello on" id="pannello-log">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">{{ t("Log in tempo reale") }}</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <label class="tp-toggle">
+          <input type="checkbox" id="auto-refresh" checked onchange="toggleAutoRefresh(this.checked)">
+          {{ t("Aggiornamento automatico") }}
+        </label>
+        <button class="btn" onclick="refreshLogs()">{{ t("Aggiorna") }}</button>
+        <button class="btn" onclick="clearView()">{{ t("Pulisci vista") }}</button>
+      </div>
+    </div>
+    <div class="log-viewer" id="log-viewer">
+      {% for line in log_lines %}
+      <div class="log-line {% if 'ERROR' in line %}error{% elif 'WARN' in line %}warn{% else %}info{% endif %}">{{ line }}</div>
+      {% else %}
+      <div class="log-line" style="color:var(--ink-3);">{{ t("Nessun log disponibile.") }}</div>
+      {% endfor %}
+    </div>
+    <div class="lt-legend">
+      <span id="log-count">{{ t("{n} righe", n=log_lines|length) }}</span>
+      <span><i style="background:var(--crit)"></i>{{ t("Errore") }}</span>
+      <span><i style="background:var(--warn-fill)"></i>{{ t("Avviso") }}</span>
+      <span><i style="background:var(--ink-3)"></i>{{ t("Informazione") }}</span>
+    </div>
+  </div>
+</div>
+
+<!-- ── Scheda 2: trace ────────────────────────────────────────────── -->
+<div class="lt-pannello" id="pannello-trace">
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">{{ t("Frame in transito") }}</div>
+      <span style="font-size:0.9rem;color:var(--ink-3);" id="count">{{ t("{n} frame", n=0) }}</span>
+    </div>
+    <div class="rs-row" style="margin-bottom:12px;">
+      <label class="tz-pick">{{ t("Apparecchio") }}
+        <select id="device" class="form-control"><option value="">{{ t("(scegli)") }}</option></select>
+      </label>
+      <button class="btn" onclick="refreshTrace()">{{ t("Aggiorna") }}</button>
+      <label class="tp-toggle"><input type="checkbox" id="autorefresh" checked> {{ t("ogni 3 secondi") }}</label>
+    </div>
+    <div class="lt-console" id="console">
+      <div class="tz-empty">{{ t("Scegli un apparecchio per vedere i frame ricevuti e inviati.") }}</div>
+    </div>
+    <div class="lt-legend">
+      <span><i style="background:var(--brand)"></i>{{ t("in arrivo") }}</span>
+      <span><i style="background:var(--warn-fill)"></i>{{ t("in uscita") }}</span>
+      <span>{{ t("passa sopra un frame per vederne i byte in esadecimale") }}</span>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── schede ───────────────────────────────────────────────────────────
+function mostraScheda(quale) {
+  ['log', 'trace'].forEach(function(s) {
+    document.getElementById('tab-' + s).checked = (s === quale);
+    document.getElementById('pannello-' + s).classList.toggle('on', s === quale);
+  });
+  // L'ancora nell'indirizzo rende la scheda condivisibile e sopravvive al
+  // ricaricamento: /logs#trace apre direttamente il trace.
+  if (history.replaceState) {
+    history.replaceState(null, '', quale === 'trace' ? '#trace' : location.pathname);
+  }
+  if (quale === 'log') scrollBottom();
+}
+if (location.hash === '#trace') mostraScheda('trace');
+
+// ── log ──────────────────────────────────────────────────────────────
+let autoRefresh = true;
+let refreshInterval;
+
+function scrollBottom() {
+  const v = document.getElementById('log-viewer');
+  if (v) v.scrollTop = v.scrollHeight;
+}
+scrollBottom();
+
+async function refreshLogs() {
+  const r = await fetch('/api/logs?n=100');
+  const d = await r.json();
+  const viewer = document.getElementById('log-viewer');
+  // I log contengono identificativi di pazienti: si costruisce con
+  // textContent, mai con innerHTML.
+  viewer.replaceChildren();
+  (d.lines || []).forEach(function(line) {
+    const div = document.createElement('div');
+    let cls = 'info';
+    if (/error/i.test(line)) cls = 'error';
+    else if (/warn/i.test(line)) cls = 'warn';
+    else if (/connect|ricevut|OK/i.test(line)) cls = 'ok';
+    div.className = 'log-line ' + cls;
+    div.textContent = line;
+    viewer.append(div);
+  });
+  if (!(d.lines || []).length) {
+    const vuoto = document.createElement('div');
+    vuoto.className = 'log-line';
+    vuoto.style.color = 'var(--ink-3)';
+    vuoto.textContent = T('Nessun log disponibile.');
+    viewer.append(vuoto);
+  }
+  document.getElementById('log-count').textContent = T('{n} righe', {n: (d.lines || []).length});
+  scrollBottom();
+}
+
+function toggleAutoRefresh(on) {
+  autoRefresh = on;
+  clearInterval(refreshInterval);
+  if (on) refreshInterval = setInterval(refreshLogs, 4000);
+}
+
+function clearView() {
+  const viewer = document.getElementById('log-viewer');
+  viewer.replaceChildren();
+  const d = document.createElement('div');
+  d.className = 'log-line';
+  d.style.color = 'var(--ink-3)';
+  d.textContent = T('Vista pulita. I log del sistema non sono eliminati.');
+  viewer.append(d);
+}
+
+toggleAutoRefresh(true);
+
+// ── trace ────────────────────────────────────────────────────────────
+let AUTO = null;
+
+async function loadDevices() {
+  try {
+    const r = await fetch('/api/trace');
+    const d = await r.json();
+    const sel = document.getElementById('device');
+    const cur = sel.value;
+    sel.replaceChildren();
+    const vuoto = document.createElement('option');
+    vuoto.value = '';
+    vuoto.textContent = T('(scegli)');
+    sel.append(vuoto);
+    (d.devices || []).forEach(function(x) {
+      const o = document.createElement('option');
+      o.value = x;
+      o.textContent = x;          // nome che arriva dalla configurazione
+      if (x === cur) o.selected = true;
+      sel.append(o);
+    });
+  } catch (e) { /* la lista si ripopola al giro dopo */ }
+}
+
+async function refreshTrace() {
+  const dev = document.getElementById('device').value;
+  if (!dev) return;
+  const cons = document.getElementById('console');
+  try {
+    const r = await fetch('/api/trace/' + encodeURIComponent(dev) + '?limit=200');
+    const d = await r.json();
+    renderTrace(d.entries || []);
+  } catch (e) {
+    cons.replaceChildren();
+    const err = document.createElement('div');
+    err.style.color = 'var(--crit)';
+    err.textContent = T('Errore: {msg}', {msg: e.message});
+    cons.append(err);
+  }
+}
+
+function renderTrace(rows) {
+  const cons = document.getElementById('console');
+  document.getElementById('count').textContent = T('{n} frame', {n: rows.length});
+  cons.replaceChildren();
+  if (!rows.length) {
+    const v = document.createElement('div');
+    v.className = 'tz-empty';
+    v.textContent = T('Nessun frame ancora.');
+    cons.append(v);
+    return;
+  }
+  rows.forEach(function(e) {
+    const ts = new Date(e.ts * 1000).toLocaleTimeString(window.I18N_LOCALE, {hour12: false});
+    const ms = ('000' + Math.floor((e.ts * 1000) % 1000)).slice(-3);
+    const box = document.createElement('div');
+    box.className = 'lf lt-frame ' + (e.direction === 'in' ? 'in' : 'out');
+
+    const meta = document.createElement('div');
+    meta.className = 'lt-meta';
+    meta.textContent = ts + '.' + ms + '  ' +
+      (e.direction === 'in' ? T('in arrivo') : T('in uscita')) + '  ' +
+      T('{n} byte', {n: e.size}) + (e.truncated ? '  [' + T('troncato') + ']' : '');
+
+    // I frame contengono dati di pazienti in chiaro: textContent, sempre.
+    const corpo = document.createElement('div');
+    corpo.textContent = (e.text || '')
+      .replace(/\r/g, String.fromCharCode(92) + 'r\n')
+      .replace(/\n/g, String.fromCharCode(92) + 'n\n');
+
+    const hex = document.createElement('div');
+    hex.className = 'lt-hex';
+    hex.textContent = e.hex || '';
+
+    box.append(meta, corpo, hex);
+    cons.append(box);
+  });
+  cons.scrollTop = cons.scrollHeight;
+}
+
+document.getElementById('device').addEventListener('change', refreshTrace);
+document.getElementById('autorefresh').addEventListener('change', function(e) {
+  if (e.target.checked) AUTO = setInterval(refreshTrace, 3000);
+  else { clearInterval(AUTO); AUTO = null; }
+});
+
+loadDevices();
+setInterval(loadDevices, 15000);
+AUTO = setInterval(refreshTrace, 3000);
+</script>
+{% endblock %}

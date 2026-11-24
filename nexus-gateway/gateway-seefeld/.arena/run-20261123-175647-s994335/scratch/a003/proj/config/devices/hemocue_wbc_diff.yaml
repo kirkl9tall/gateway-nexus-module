@@ -1,0 +1,11 @@
+id: hemocue_wbc_diff
+type: mllp_hl7
+enabled: false
+display_name: "HemoCue WBC DIFF (POCT)"
+vendor: HemoCue (Radiometer)
+model: WBC DIFF
+listen_host: "0.0.0.0"
+listen_port: 5030
+notes: |
+  POCT emocromo semplificato. Comune in praxis / studi ambulatoriali.
+  Protocollo: HL7 v2 MLLP (config in menu del device).

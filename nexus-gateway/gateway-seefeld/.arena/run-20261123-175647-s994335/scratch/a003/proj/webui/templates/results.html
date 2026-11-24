@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+{% block title %}Risultati — JerumedNexus{% endblock %}
+{% block page_title %}Risultati ricevuti{% endblock %}
+{% block content %}
+
+<style>
+.search-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;background:var(--bg2);
+            border:1px solid var(--border);border-radius:var(--radius);padding:12px;margin-bottom:14px}
+.search-bar input, .search-bar select{
+  background:var(--bg);border:1px solid var(--border);color:var(--text);padding:8px 12px;
+  border-radius:6px;font-size:0.85rem;font-family:var(--mono);outline:none
+}
+.search-bar input{width:220px}
+.search-bar .grow{flex:1}
+.res-table{width:100%;border-collapse:collapse;font-size:0.83rem}
+.res-table th{background:var(--bg3);color:var(--text3);font-family:var(--mono);font-size:0.7rem;
+              font-weight:600;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border);
+              text-transform:uppercase;letter-spacing:.06em}
+.res-table td{padding:9px 14px;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--mono)}
+.res-table tr:last-child td{border-bottom:none}
+.res-table tr:hover td{background:var(--bg3)}
+.status-ok      {color:#4caf7d;font-weight:600}
+.status-part    {color:#ffb800;font-weight:600}
+.status-err     {color:#e05c5c;font-weight:600}
+.pill{background:var(--bg3);border:1px solid var(--border);color:var(--text2);padding:2px 8px;
+      border-radius:99px;font-family:var(--mono);font-size:0.72rem}
+</style>
+
+<div class="search-bar">
+  <input id="q" placeholder="Ricerca sample / paziente / control-id…">
+  <select id="status">
+    <option value="">Tutti gli stati</option>
+    <option value="OK">OK</option>
+    <option value="PARZIALE">PARZIALE</option>
+    <option value="ERRORE">ERRORE</option>
+  </select>
+  <select id="device"><option value="">Tutti i device</option></select>
+  <input type="date" id="since">
+  <div class="grow"></div>
+  <div style="font-size:0.8rem;color:var(--text3);font-family:var(--mono)">
+    <span id="count">0 risultati</span>
+  </div>
+  <button class="btn btn-primary" onclick="load(true)">Cerca</button>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden">
+  <div style="overflow-x:auto">
+    <table class="res-table">
+      <thead>
+        <tr>
+          <th>Data</th><th>Ora</th><th>Device</th><th>Sample</th>
+          <th>Paziente</th><th>Analiti</th><th>Target OK</th><th>Stato</th>
+        </tr>
+      </thead>
+      <tbody id="tbody">
+        <tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text3)">Caricamento…</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+async function load(reset) {
+  const q = document.getElementById('q').value.trim();
+  const status = document.getElementById('status').value;
+  const device = document.getElementById('device').value;
+  const since = document.getElementById('since').value;
+  const params = new URLSearchParams();
+  if (q) params.set('q', q);
+  if (status) params.set('status', status);
+  if (device) params.set('device', device);
+  if (since) params.set('since', since + 'T00:00:00');
+  params.set('limit', '200');
+  try {
+    const r = await fetch('/api/history?' + params.toString());
+    const d = await r.json();
+    render(d.entries || []);
+    document.getElementById('count').textContent = (d.entries||[]).length + ' risultati';
+    // Populate device dropdown from current results (once)
+    if (reset) {
+      const sel = document.getElementById('device');
+      const devs = [...new Set((d.entries||[]).map(x => x.device).filter(Boolean))].sort();
+      const cur = sel.value;
+      sel.innerHTML = '<option value="">Tutti i device</option>' +
+        devs.map(x => '<option value="' + x + '"' + (x===cur?' selected':'') + '>' + x + '</option>').join('');
+    }
+  } catch (e) {
+    document.getElementById('tbody').innerHTML =
+      '<tr><td colspan="8" style="padding:20px;color:#e05c5c">Errore: ' + e + '</td></tr>';
+  }
+}
+
+function render(rows) {
+  if (!rows.length) {
+    document.getElementById('tbody').innerHTML =
+      '<tr><td colspan="8" style="padding:40px;text-align:center;color:var(--text3)">Nessun risultato per i filtri correnti</td></tr>';
+    return;
+  }
+  document.getElementById('tbody').innerHTML = rows.map(r => {
+    const ts = new Date(r.ts);
+    const date = ts.toLocaleDateString('it-CH');
+    const time = ts.toLocaleTimeString('it-CH');
+    const s = r.status || '?';
+    const cls = s === 'OK' ? 'status-ok' : (s === 'PARZIALE' ? 'status-part' : 'status-err');
+    const ok = (r.succeeded || []).length;
+    return '<tr>' +
+      '<td>' + date + '</td>' +
+      '<td>' + time + '</td>' +
+      '<td><span class="pill" style="color:var(--accent)">' + (r.device || '?') + '</span></td>' +
+      '<td>' + (r.sample_id || '') + '</td>' +
+      '<td>' + (r.patient_id || '') + '</td>' +
+      '<td style="text-align:center">' + (r.analytes || 0) + '</td>' +
+      '<td>' + (r.succeeded||[]).join(', ') + '</td>' +
+      '<td><span class="' + cls + '">' + s + '</span></td>' +
+    '</tr>';
+  }).join('');
+}
+
+document.getElementById('q').addEventListener('keyup', e => { if (e.key === 'Enter') load(false); });
+load(true);
+setInterval(() => load(false), 30000);
+</script>
+{% endblock %}

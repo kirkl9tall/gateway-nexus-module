@@ -1,0 +1,79 @@
+site_name: JerumedNexus Gateway
+site_description: HL7 v2.5 / FHIR R4 gateway for laboratory analyzers
+site_url: https://docs.jerumed-nexus.ch
+repo_url: https://github.com/jerumed-nexus/jerumednexus-gateway
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: it
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+  palette:
+    - scheme: default
+      primary: cyan
+      accent:  cyan
+      toggle: { icon: material/weather-night, name: Modalità scura }
+    - scheme: slate
+      primary: cyan
+      accent:  cyan
+      toggle: { icon: material/weather-sunny, name: Modalità chiara }
+
+nav:
+  - Home: index.md
+  - Guide utente:
+    - Installazione: install.md
+    - Primo avvio: getting-started.md
+    - FAQ: FAQ.md
+    - Troubleshooting: TROUBLESHOOTING.md
+  - Architettura:
+    - Overview: ARCHITECTURE.md
+    - API REST: API.md
+    - Device supportati: DEVICES.md
+  - Operations:
+    - Runbook: runbooks/README.md
+    - SLO/SLI: SLO.md
+    - Monitoring: prometheus/README.md
+    - Chaos testing: ../scripts/chaos/README.md
+  - Sicurezza:
+    - SECURITY: ../SECURITY.md
+    - APT repo firmato: APT-REPO.md
+    - Docker signing: DOCKER-SIGNING.md
+    - SLSA: SLSA.md
+  - Regolatorio:
+    - Overview: regulatory/README.md
+    - Risk analysis: regulatory/RISK-ANALYSIS.md
+    - IEC 62304: regulatory/IEC-62304.md
+    - IVDR checklist: regulatory/IVDR-CHECKLIST.md
+    - DPA template: regulatory/DPA-TEMPLATE.md
+  - Sviluppo:
+    - Contributing: ../CONTRIBUTING.md
+    - Changelog: ../CHANGELOG.md
+    - Mutation testing: MUTATION-TESTING.md
+    - Remote management: REMOTE-MANAGEMENT.md
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - toc:
+      permalink: true
+
+plugins:
+  - search:
+      lang: [it, en, de]
+
+extra:
+  social:
+    - icon: fontawesome/solid/globe
+      link: https://jerumed-nexus.ch
+    - icon: fontawesome/solid/envelope
+      link: mailto:info@jerumed-nexus.ch

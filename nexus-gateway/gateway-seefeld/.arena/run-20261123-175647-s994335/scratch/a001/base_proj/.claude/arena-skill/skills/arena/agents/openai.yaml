@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arena"
+  short_description: "Compare competing answers through adversarial rounds"
+  default_prompt: "Use $arena --quick to compare solutions to my task."

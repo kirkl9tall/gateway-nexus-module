@@ -1,0 +1,13 @@
+[Unit]
+Description=JerumedNexus Gateway shared listen socket
+
+[Socket]
+ListenStream=0.0.0.0:8088
+NoDelay=yes
+KeepAlive=yes
+# Only one slot binds at a time; switchover uses `systemctl start green
+# && systemctl stop blue`, and clients see no visible downtime because
+# the socket unit holds the FD across the switch.
+
+[Install]
+WantedBy=sockets.target

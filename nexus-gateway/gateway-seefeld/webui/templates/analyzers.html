@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Apparecchi") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+
+
+{# ── For everybody: the machines, up or down ── #}
+{% from "_ui.html" import chip, link_label, machine_state_text %}
+{% set n_on = ov.machines|selectattr('state', 'equalto', 'online')|list|length %}
+{% set n_idle = ov.machines|selectattr('state', 'equalto', 'idle')|list|length %}
+{% set n_bad = ov.machines|selectattr('level', 'in', ['critical', 'warning'])|list|length %}
+<h1 class="page-h1">{{ t("I tuoi apparecchi") }}</h1>
+<p class="page-desc">{{ t("Ogni apparecchio collegato al gateway, e se sta inviando i risultati.") }}</p>
+
+{% if ov.machines %}
+<div class="az-summary">
+  {% if n_on %}{{ chip('good', t("{n} collegati", n=n_on)) }}{% endif %}
+  {% if n_idle %}{{ chip('neutral', t("{n} in attesa di analisi", n=n_idle)) }}{% endif %}
+  {% if n_bad %}{{ chip('critical' if ov.machines|selectattr('level', 'equalto', 'critical')|list else 'warning', t("{n} da controllare", n=n_bad)) }}{% endif %}
+  {% if not ov.gateway.on %}{{ chip('critical', t("Gateway spento")) }}{% endif %}
+</div>
+{% endif %}
+
+<div class="az-usb-new" id="az-usb-new" hidden>
+  <strong>{{ t("Nuovo apparecchio collegato via USB") }}</strong>
+  <span id="az-usb-new-text"></span>
+</div>
+
+<div class="mc-grid" style="margin-bottom:32px;">
+  {% for m in ov.machines %}
+  {% include "_machine_card.html" %}
+  {% endfor %}
+
+</div>
+
+{# ── How to connect a new machine: big, for everybody ── #}
+<section class="az-connect" aria-labelledby="az-connect-title">
+  <div class="az-connect-head">
+    <h2 id="az-connect-title">{{ t("Collegare un nuovo apparecchio") }}</h2>
+    {% if current_role == 'admin' %}
+    <a class="btn btn-primary btn-lg" href="/devices/new">{{ t("Aggiungi un apparecchio") }}</a>
+    {% endif %}
+  </div>
+  <ol>
+    <li><b>{{ t("Collega il cavo") }}</b>{{ t("Cavo USB: inseriscilo nel gateway. Cavo di rete: collega l'apparecchio alla rete dello studio.") }}</li>
+    <li><b>{{ t("Scegli l'apparecchio") }}</b>{{ t("Premi «Aggiungi un apparecchio» e scegli il modello: il resto si compila da solo.") }}</li>
+    <li><b>{{ t("Fai un'analisi di prova") }}</b>{{ t("Quando il risultato arriva, l'apparecchio diventa verde qui sopra.") }}</li>
+  </ol>
+  <p class="az-connect-help">{{ t("Serve aiuto? Assistenza: +41 78 402 05 99") }}</p>
+</section>
+
+{# ── For the technician: catalog, USB scan, mappings, ports. Bottom, closed. ── #}
+<details class="tech-zone tech-only" id="tech-zone">
+  <summary>{{ t("Dettagli per il tecnico") }} <small>{{ t("cavi USB, apparecchi configurati, valori trasmessi") }}</small></summary>
+  <div class="tech-zone-body">
+
+    {# 1. USB cables the gateway sees right now #}
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">{{ t("Cavi USB visti dal gateway") }}</div>
+        <button class="btn" id="btn-discover-usb" onclick="discoverUsb()">{{ t("Cerca di nuovo") }}</button>
+      </div>
+      <div id="discovery-list" class="tz-list"><p class="tz-empty">{{ t("Carico…") }}</p></div>
+    </section>
+
+    {# 2. Machines configured on this gateway #}
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">{{ t("Apparecchi configurati") }}</div>
+        <a class="btn btn-primary" href="/devices/new">{{ t("Aggiungi un apparecchio") }}</a>
+      </div>
+      {% if ov.machines %}
+      <div class="tz-table-wrap">
+      <table class="tz-table">
+        <thead><tr>
+          <th>{{ t("Apparecchio") }}</th><th>{{ t("Stato") }}</th><th>{{ t("Collegamento") }}</th>
+          <th>{{ t("Protocollo") }}</th><th>{{ t("Ultimo risultato") }}</th><th><span class="tz-sr">{{ t("Azioni") }}</span></th>
+        </tr></thead>
+        <tbody>
+        {% for m in ov.machines %}
+          {% set prof = catalog_by_id.get(m.id) %}
+          <tr>
+            <td><strong>{{ m.name }}</strong><small>{{ m.id }}</small></td>
+            <td>{{ chip(m.level, machine_state_text(m)) }}</td>
+            <td>{{ link_label(m.link) }}<small class="mono">{{ m.where or "—" }}</small></td>
+            <td class="mono">{{ prof.type if prof else "—" }}</td>
+            <td>{{ m.last_result|when if m.last_result else t("mai") }}</td>
+            <td><div class="tz-actions">
+              {% if prof %}
+              <a class="btn" href="/devices/edit/{{ m.id }}">{{ t("Modifica") }}</a>
+              <button class="btn btn-danger" onclick="turnOff('{{ m.id }}', this)" data-name="{{ m.name }}">{{ t("Spegni") }}</button>
+              {% else %}
+              <span class="tz-note">{{ t("Definito in gateway.yaml") }}</span>
+              {% endif %}
+            </div></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+      </div>
+      {% else %}
+      <p class="tz-empty">{{ t("Nessun apparecchio è ancora collegato.") }}</p>
+      {% endif %}
+    </section>
+
+    {# 3. Reference: which values each machine sends #}
+    <section class="card">
+      <div class="card-header">
+        <div class="card-title">{{ t("Valori trasmessi") }}</div>
+        <label class="tz-pick">{{ t("Apparecchio") }}
+          <select id="map-select" class="form-control" onchange="renderMap(this.value)">
+            {% for k, label in [("sysmex_xp300", "Sysmex XP-300"), ("sysmex_xq320", "Sysmex XQ-320"),
+                                ("sysmex_poch100i", "Sysmex pocH-100i"), ("horiba_microsemi", "Horiba Microsemi CRP"),
+                                ("seamaty_smt120", "Seamaty SMT-120"), ("seamaty_sd1", "Seamaty SD1"),
+                                ("seamaty_sd3", "Seamaty SD3"), ("cobas_b101", "Roche Cobas b 101"),
+                                ("loc200", "LOC-200"), ("uc1000", "Menarini UC-1000")] %}
+            <option value="{{ k }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      </div>
+      <div class="tz-table-wrap"><table class="tz-table" id="map-tbl"></table></div>
+    </section>
+
+  </div>
+</details>
+
+<script>
+const MAPS={sysmex_xp300:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["NEUT#","Neutrophile abs.","10³/µL","2.0–7.0"],["LYMPH#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MXD#","Mono./Eos./Baso. abs.","10³/µL","0.2–1.0"],["NEUT%","Neutrophile %","%","40–75"],["LYMPH%","Lymphozyten %","%","20–45"],["MXD%","Mono./Eos./Baso. %","%","2–12"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt pro Erythrozyt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW-SD","Erythrozyten-Verteilungsbreite SD","fL","37–54"],["RDW-CV","Erythrozyten-Verteilungsbreite CV","%","11–16"],["PLT","Thrombozyten","10³/µL","150–400"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"],["P-LCR","Grossthrombozyten-Anteil","%","10–45"],["PCT","Thrombokrit","%","0.10–0.30"]],sysmex_xq320:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["NEUT#","Neutrophile abs.","10³/µL","2.0–7.0"],["LYMPH#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MXD#","Mono./Eos./Baso. abs.","10³/µL","0.2–1.0"],["NEUT%","Neutrophile %","%","40–75"],["LYMPH%","Lymphozyten %","%","20–45"],["MXD%","Mono./Eos./Baso. %","%","2–12"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW-SD","Erythrozyten-Verteilungsbreite SD","fL","37–54"],["RDW-CV","Erythrozyten-Verteilungsbreite CV","%","11–16"],["PLT","Thrombozyten","10³/µL","150–400"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"],["P-LCR","Grossthrombozyten-Anteil","%","10–45"],["PCT","Thrombokrit","%","0.10–0.30"]],sysmex_poch100i:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["NEUT#","Neutrophile abs.","10³/µL","2.0–7.0"],["LYMPH#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MXD#","Mischzellen abs.","10³/µL","0.2–1.0"],["NEUT%","Neutrophile %","%","40–75"],["LYMPH%","Lymphozyten %","%","20–45"],["MXD%","Mischzellen %","%","2–12"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW-CV","Erythrozyten-Verteilungsbreite CV","%","11–16"],["PLT","Thrombozyten","10³/µL","150–400"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"]],horiba_microsemi:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["GRA#","Granulozyten abs.","10³/µL","2.0–7.5"],["LYM#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MID#","Mittelzellen abs.","10³/µL","0.1–1.0"],["GRA%","Granulozyten %","%","43–76"],["LYM%","Lymphozyten %","%","20–45"],["MID%","Mittelzellen %","%","2–12"],["GLR","Granulozyten/Lymphozyten-Ratio","","<3.0"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW","Erythrozyten-Verteilungsbreite","%","11.5–14.5"],["PLT","Thrombozyten","10³/µL","150–400"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"],["PCT","Thrombokrit","%","0.10–0.30"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["CRP","C-reaktives Protein","mg/L","<5.0"]],uc1000:[["GLU","Glukose","","negativ"],["PRO","Protein","","negativ"],["BIL","Bilirubin","","negativ"],["KET","Ketone","","negativ"],["BLO","Blut","","negativ"],["LEU","Leukozyten","","negativ"],["NIT","Nitrit","","negativ"],["URO","Urobilinogen","mg/dL","normal"],["ASC","Ascorbinsäure","","negativ"],["SG","Spezifisches Gewicht","","1.005–1.030"],["pH","pH","","5.0–8.0"],["CRE","Kreatinin","µmol/L",""],["ALB","Albumin","g/L",""],["AC","Albumin/Kreatinin-Quotient","",""],["PC","Protein/Kreatinin-Quotient","",""]],seamaty_smt120:[["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALP","Alkalische Phosphatase","U/L","50–135"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["GLU","Glukose","mmol/L","4.41–6.19"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["UA","Harnsäure","µmol/L","155–357"]],seamaty_sd1:[["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALP","Alkalische Phosphatase","U/L","50–135"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["CHE","Cholinesterase","U/L","5320–12920"],["TBA","Gallensäuren gesamt","µmol/L","0–10"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["UA","Harnsäure","µmol/L","155–357"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["GLU","Glukose","mmol/L","4.41–6.19"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["CA","Kalzium","mmol/L","2.1–2.6"],["AMY","Amylase","U/L","35–135"],["LDH","Laktat-Dehydrogenase","U/L","135–225"],["CK","Kreatinkinase gesamt","U/L","26–192"]],seamaty_sd3:[["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALP","Alkalische Phosphatase","U/L","50–135"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["GLU","Glukose","mmol/L","4.41–6.19"],["HBA1C","Glykiertes Hämoglobin (HbA1c)","%","4.0–5.6"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["UA","Harnsäure","µmol/L","155–357"],["CRP","C-reaktives Protein","mg/L","<5.0"],["CA","Kalzium","mmol/L","2.1–2.6"]],cobas_b101:[["HBA1C","HbA1c — Glykiertes Hämoglobin","%","4.0–5.6"],["TC","Cholesterin gesamt","mmol/L","0–5.18"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["TG","Triglyzeride","mmol/L","0–1.7"],["NHDL","Nicht-HDL-Cholesterin","mmol/L","0–4.14"],["CRP","C-reaktives Protein (quantitativ)","mg/L","<5.0"]],loc200:[["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["GLOB","Globuline","g/L","20–40"],["A/G","Albumin/Globulin-Quotient","","1.0–2.0"],["ALP","Alkalische Phosphatase","U/L","50–135"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["UA","Harnsäure","µmol/L","155–357"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["AMY","Amylase","U/L","35–135"],["GLU","Glukose","mmol/L","4.41–6.19"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL-C","HDL-Cholesterin","mmol/L","≥1.04"],["LDL-C","LDL-Cholesterin","mmol/L","0–3.37"]]};
+
+function _esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+
+// ── Values sent per machine (reference table) ─────────────────────
+function renderMap(dev) {
+  var rows = MAPS[dev], tbl = document.getElementById('map-tbl');
+  if (!rows || !tbl) return;
+  tbl.innerHTML = '<thead><tr><th>' + T('Codice') + '</th><th>' + T('Valore') + '</th><th>' + T('Unità') +
+    '</th><th>' + T('Intervallo di riferimento') + '</th></tr></thead><tbody>' +
+    rows.map(function (r) {
+      return '<tr><td class="mono">' + _esc(r[0]) + '</td><td>' + _esc(r[1]) + '</td><td>' + _esc(r[2] || '—') +
+             '</td><td>' + _esc(r[3] || '—') + '</td></tr>';
+    }).join('') + '</tbody>';
+}
+renderMap('sysmex_xp300');
+
+// ── USB cables seen by the gateway ────────────────────────────────
+async function loadDiscovered() {
+  var box = document.getElementById('discovery-list');
+  if (!box) return;
+  try {
+    var d = await (await fetch('/api/devices/discovered')).json();
+    var usb = (d.devices || []).filter(function (x) { return (x.location || '').indexOf('/dev/') === 0; });
+    if (!usb.length) {
+      box.innerHTML = '<p class="tz-empty">' + _esc(T('Nessun cavo USB collegato. Inserisci il cavo e premi «Cerca di nuovo».')) + '</p>';
+      return;
+    }
+    box.innerHTML = usb.map(function (u) {
+      var info = [u.location, u.usb_id ? 'USB ' + u.usb_id : '', u.chip || '', u.protocol || ''].filter(Boolean).join(' · ');
+      var right = u.activated
+        ? '<span class="chip good">' + _esc(T('In uso')) + '</span>'
+        : '<a class="btn btn-primary" href="/devices/new">' + _esc(T('Configura un apparecchio')) + '</a>';
+      return '<div class="tz-row"><div><strong>' + _esc(u.display_name || u.vendor || T('dispositivo generico')) +
+             '</strong><small class="mono">' + _esc(info) + '</small></div>' + right + '</div>';
+    }).join('');
+  } catch (e) { /* keep last view */ }
+}
+
+async function discoverUsb() {
+  var btn = document.getElementById('btn-discover-usb');
+  btn.disabled = true;
+  try {
+    await fetch('/api/devices/discover', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+    await loadDiscovered();
+  } catch (e) {}
+  btn.disabled = false;
+}
+
+var _tz = document.getElementById('tech-zone'), _tzLoaded = false;
+if (_tz) _tz.addEventListener('toggle', function () {
+  if (_tz.open && !_tzLoaded) { _tzLoaded = true; loadDiscovered(); setInterval(loadDiscovered, 15000); }
+});
+
+// ── Turn a machine off (kept in the catalog, can be added again) ──
+async function turnOff(id, btn) {
+  if (!confirm(T('Spegnere «{nome}»? Il gateway smette di ricevere i suoi risultati.', {nome: btn.dataset.name}))) return;
+  btn.disabled = true;
+  try {
+    var r = await fetch('/api/devices/' + encodeURIComponent(id) + '/enable',
+      {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({enabled: false})});
+    var d = await r.json();
+    if (d.ok) { toast(T('Apparecchio spento.')); setTimeout(function () { location.reload(); }, 800); }
+    else { toast(T('Errore: {msg}', {msg: d.error || T('operazione non riuscita')}), 'error'); btn.disabled = false; }
+  } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message}), 'error'); btn.disabled = false; }
+}
+
+// ── Doctor notice: a USB machine was plugged in and waits for the technician ──
+(async function () {
+  try {
+    var r = await fetch('/api/devices/discovered', {credentials: 'same-origin'});
+    if (!r.ok) return;
+    var d = await r.json();
+    var p = (d.pending || []).filter(function (x) { return !x.activated; });
+    if (!p.length) return;
+    var names = p.map(function (x) { return x.display_name || x.vendor || T('dispositivo generico'); }).join(', ');
+    document.getElementById('az-usb-new-text').textContent =
+      T('{nomi}. Il tecnico deve confermarlo una volta, poi funziona da solo.', {nomi: names});
+    document.getElementById('az-usb-new').hidden = false;
+  } catch (e) {}
+})();
+</script>
+
+{% endblock %}

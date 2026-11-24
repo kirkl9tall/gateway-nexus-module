@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 520" font-family="Inter,Arial,sans-serif" font-size="12">
+  <style>
+    .box   { fill: #ffffff; stroke: #2b3a55; stroke-width: 1.5; rx: 6; ry: 6; }
+    .card  { fill: #eef3ff; stroke: #2b3a55; stroke-width: 1.2; rx: 8; ry: 8; }
+    .title { font-weight: 700; fill: #2b3a55; }
+    .sub   { fill: #4a5568; font-size: 11px; }
+    .arrow { fill: none; stroke: #2b3a55; stroke-width: 1.6; marker-end: url(#h); }
+    .lbl   { fill: #2b3a55; font-size: 11px; }
+    .trust { fill: none; stroke: #d69e2e; stroke-width: 2; stroke-dasharray: 6 4; rx: 12; ry: 12; }
+    .trustlbl { fill: #d69e2e; font-weight: 600; }
+  </style>
+  <defs>
+    <marker id="h" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#2b3a55"/>
+    </marker>
+  </defs>
+
+  <text x="20" y="26" class="title" font-size="18">JerumedNexus Gateway — reference architecture</text>
+  <text x="20" y="44" class="sub">Raspberry Pi on the clinic LAN; no patient data leaves the site.</text>
+
+  <!-- Trust boundary: clinic -->
+  <rect x="12" y="60" width="875" height="440" class="trust"/>
+  <text x="24" y="80" class="trustlbl">Clinic trust boundary (nDSG / GDPR data residency)</text>
+
+  <!-- Analyzers -->
+  <g>
+    <rect x="30" y="120" width="130" height="60" class="card"/>
+    <text x="95" y="145" text-anchor="middle" class="title">Sysmex XQ-320</text>
+    <text x="95" y="162" text-anchor="middle" class="sub">ASTM / HL7</text>
+
+    <rect x="30" y="200" width="130" height="60" class="card"/>
+    <text x="95" y="225" text-anchor="middle" class="title">Cobas b101</text>
+    <text x="95" y="242" text-anchor="middle" class="sub">POCT1-A2</text>
+
+    <rect x="30" y="280" width="130" height="60" class="card"/>
+    <text x="95" y="305" text-anchor="middle" class="title">UC-1000</text>
+    <text x="95" y="322" text-anchor="middle" class="sub">RS-232 CSV</text>
+
+    <rect x="30" y="360" width="130" height="60" class="card"/>
+    <text x="95" y="385" text-anchor="middle" class="title">LOC-200</text>
+    <text x="95" y="402" text-anchor="middle" class="sub">Serial custom</text>
+  </g>
+
+  <!-- Pi central box -->
+  <g>
+    <rect x="240" y="100" width="380" height="340" class="box"/>
+    <text x="430" y="128" text-anchor="middle" class="title" font-size="15">JerumedNexus Gateway (Pi 4/5)</text>
+
+    <rect x="260" y="150" width="150" height="46" class="card"/>
+    <text x="335" y="175" text-anchor="middle" class="title">Adapters</text>
+    <text x="335" y="188" text-anchor="middle" class="sub">28 device types</text>
+
+    <rect x="450" y="150" width="150" height="46" class="card"/>
+    <text x="525" y="175" text-anchor="middle" class="title">Router / DLQ</text>
+    <text x="525" y="188" text-anchor="middle" class="sub">Fernet AES-128</text>
+
+    <rect x="260" y="220" width="150" height="46" class="card"/>
+    <text x="335" y="245" text-anchor="middle" class="title">HL7 v2.5/2.7</text>
+    <text x="335" y="258" text-anchor="middle" class="sub">FHIR R4</text>
+
+    <rect x="450" y="220" width="150" height="46" class="card"/>
+    <text x="525" y="245" text-anchor="middle" class="title">Breaker + retry</text>
+    <text x="525" y="258" text-anchor="middle" class="sub">Persisted</text>
+
+    <rect x="260" y="290" width="150" height="46" class="card"/>
+    <text x="335" y="315" text-anchor="middle" class="title">SQLite history</text>
+    <text x="335" y="328" text-anchor="middle" class="sub">Migrations</text>
+
+    <rect x="450" y="290" width="150" height="46" class="card"/>
+    <text x="525" y="315" text-anchor="middle" class="title">Audit + PII hash</text>
+    <text x="525" y="328" text-anchor="middle" class="sub">2y retention</text>
+
+    <rect x="260" y="360" width="150" height="46" class="card"/>
+    <text x="335" y="385" text-anchor="middle" class="title">Web UI + REST</text>
+    <text x="335" y="398" text-anchor="middle" class="sub">OIDC / TOTP / LDAP</text>
+
+    <rect x="450" y="360" width="150" height="46" class="card"/>
+    <text x="525" y="385" text-anchor="middle" class="title">Prometheus + OTel</text>
+    <text x="525" y="398" text-anchor="middle" class="sub">JSON logs</text>
+  </g>
+
+  <!-- LIS / HIS -->
+  <g>
+    <rect x="710" y="140" width="150" height="80" class="card"/>
+    <text x="785" y="170" text-anchor="middle" class="title">LIS / HIS</text>
+    <text x="785" y="190" text-anchor="middle" class="sub">Tomedo, curaMED,</text>
+    <text x="785" y="204" text-anchor="middle" class="sub">Vitomed, WinMed…</text>
+  </g>
+
+  <!-- Backup / NAS -->
+  <g>
+    <rect x="710" y="240" width="150" height="60" class="card"/>
+    <text x="785" y="265" text-anchor="middle" class="title">Backup NAS</text>
+    <text x="785" y="282" text-anchor="middle" class="sub">GPG-encrypted tar</text>
+  </g>
+
+  <!-- Admin browser -->
+  <g>
+    <rect x="710" y="330" width="150" height="60" class="card"/>
+    <text x="785" y="355" text-anchor="middle" class="title">Admin browser</text>
+    <text x="785" y="372" text-anchor="middle" class="sub">TLS + 2FA/TOTP</text>
+  </g>
+
+  <!-- Arrows analyzer → Pi -->
+  <path class="arrow" d="M 160 150 L 258 172"/>
+  <path class="arrow" d="M 160 230 L 258 240"/>
+  <path class="arrow" d="M 160 310 L 258 305"/>
+  <path class="arrow" d="M 160 390 L 258 375"/>
+
+  <!-- Arrows Pi → LIS -->
+  <path class="arrow" d="M 600 172 L 708 172"/>
+  <text x="620" y="164" class="lbl">HL7 MLLP / FHIR REST</text>
+
+  <!-- Pi → Backup -->
+  <path class="arrow" d="M 600 265 L 708 265"/>
+  <text x="620" y="258" class="lbl">Nightly tar+GPG</text>
+
+  <!-- Admin → Pi -->
+  <path class="arrow" d="M 708 358 L 600 385"/>
+  <text x="608" y="378" class="lbl">HTTPS/OIDC</text>
+
+  <text x="450" y="490" text-anchor="middle" class="sub">© Jerumed Nexus GmbH — v1.3.0 reference architecture</text>
+</svg>

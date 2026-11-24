@@ -1,0 +1,12 @@
+main.py                                       opt/jerumednexus/
+requirements.txt                              opt/jerumednexus/
+README.md                                     opt/jerumednexus/
+config/                                       opt/jerumednexus/
+src/                                          opt/jerumednexus/
+webui/                                        opt/jerumednexus/
+tools/                                        opt/jerumednexus/
+scripts/jerumednexus-gateway.service                lib/systemd/system/
+scripts/jerumednexus-webui.service                  lib/systemd/system/
+scripts/jerumednexus-device-notify@.service         lib/systemd/system/
+scripts/99-jerumednexus-devices.rules               lib/udev/rules.d/
+scripts/jerumednexus                                usr/local/bin/

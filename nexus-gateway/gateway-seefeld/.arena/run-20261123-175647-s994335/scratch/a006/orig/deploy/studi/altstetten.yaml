@@ -1,0 +1,61 @@
+# Studio Altstetten — configurazione di produzione.
+#
+# Questi sono i valori con cui i referti venivano assegnati correttamente ai
+# pazienti in Tomedo (verificati contro l'archivio del gestionale). Se un
+# giorno le consegne si fermano, il primo confronto da fare e' con questo
+# file: e' il "prima" che per due giorni non abbiamo avuto.
+#
+# Le password NON stanno qui: vedi LEGGIMI.md e config/secrets.env.
+
+log_level: INFO
+log_file: logs/gateway.log
+
+hl7:
+  version: "2.3"
+  # Deve corrispondere alla codifica reale dei byte: con 8859/1 dichiarato e
+  # UTF-8 scritto, umlaut e µ arrivano illeggibili.
+  charset: "8859/1"
+  # Aggiungerebbe +0200 ai timestamp. Tomedo con questo attivo smetteva di
+  # riconoscere i referti: e' stato uno dei tre fattori del blackout.
+  include_timezone: false
+
+  # MSH-3 — usata solo per gli apparecchi senza nome proprio. Deve comparire
+  # in Tomedo sotto Laborimport -> "HL7, fur folgende SendingApplications
+  # werden neue Auftrage erstellt", insieme al nome di ogni analizzatore.
+  sending_application: "LOC200"
+
+  # MSH-4 e MSH-6 sono DUE COSE DIVERSE. Copiare il primo nel secondo e' il
+  # guasto che ha fermato le consegne: Tomedo riceveva i file, li leggeva, e
+  # non li assegnava piu' a nessun paziente.
+  sending_facility: "Altstetten"          # da dove parte
+  receiving_application: "LIS"
+  receiving_facility: "Dr. A Abuawad"     # a chi e' indirizzato
+
+loc200:
+  connection_type: http
+  http_port: 5003
+
+devices:
+  # Il nome qui finisce in MSH-3 per i referti di questo apparecchio: deve
+  # essere dichiarato anche in Tomedo, altrimenti i referti arrivano ma non
+  # vengono assegnati.
+  - id: sysmex_xq320
+    display_name: "Sysmex XQ-320"
+    type: sysmex_astm
+    enabled: true
+    listen_host: "0.0.0.0"
+    listen_port: 5006
+    # Il XQ-320 non fa la stretta di mano ENQ/ACK: invia i record grezzi.
+    # Con la modalita' sbagliata il gateway aspetta un handshake che non
+    # arriva mai e non registra nulla.
+    astm_mode: "1381-95"
+
+targets:
+  - name: tomedo
+    type: tomedo
+    enabled: true
+    sftp_host: "192.168.2.215"
+    sftp_port: 22
+    sftp_user: "jerumed"
+    sftp_pass_env: TOMEDO_SFTP_PASS
+    sftp_remote_path: "/Users/jerumed/ldt"

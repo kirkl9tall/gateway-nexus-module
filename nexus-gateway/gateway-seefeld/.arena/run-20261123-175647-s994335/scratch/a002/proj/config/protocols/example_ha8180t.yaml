@@ -1,0 +1,31 @@
+protocol_name: menarini_ha_8180t
+transport:    rs232
+encoding:     ascii
+framing:
+  line_separator: "\r"
+field_delimiter: "|"
+
+records:
+  header:
+    pattern: "^H\\|"
+    fields:
+      sender: {index: 4, split: "^", pick: 0}
+
+  patient:
+    pattern: "^P\\|"
+    fields:
+      patient_id:   {index: 3}
+      patient_name: {index: 5, split: "^", pick: 1}
+
+  order:
+    pattern: "^O\\|"
+    fields:
+      sample_id: {index: 2}
+
+  observation:
+    pattern: "^R\\|"
+    fields:
+      analyte: {index: 2, split: "^", pick: 3}
+      value:   {index: 3}
+      unit:    {index: 4}
+      flag:    {index: 6}

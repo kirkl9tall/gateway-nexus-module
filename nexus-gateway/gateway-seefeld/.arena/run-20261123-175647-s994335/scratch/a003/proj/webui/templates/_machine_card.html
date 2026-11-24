@@ -1,0 +1,17 @@
+{# One analyzer, as the doctor sees it. Expects `m` from webui/overview.py. #}
+{% from "_ui.html" import chip, machine_icon, link_label, machine_state_text, machine_hint %}
+<article class="mc {{ m.level }}">
+  <div class="mc-top">
+    <span class="mc-icon">{{ machine_icon() }}</span>
+    <div class="mc-title">
+      <h3>{{ m.name }}</h3>
+      <span>{{ t(m.kind) }}</span>
+      <span>{{ link_label(m.link) }}</span>
+    </div>
+  </div>
+  {{ chip(m.level, machine_state_text(m)) }}
+  <div class="mc-numbers">
+    <div><b>{{ m.today }}</b><span>{{ t("analisi oggi") }}</span></div>
+  </div>
+  <p class="mc-hint">{{ machine_hint(m) }}</p>
+</article>

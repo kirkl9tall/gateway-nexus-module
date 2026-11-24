@@ -1,0 +1,131 @@
+{
+  "info": {
+    "name": "JerumedNexus Gateway",
+    "description": "REST API collection for the JerumedNexus Gateway v1.2. Import into Postman/Insomnia and set the collection variables at the top.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "base_url",  "value": "http://127.0.0.1:8080"},
+    {"key": "username",  "value": "admin"},
+    {"key": "password",  "value": "DemoPassword123!"},
+    {"key": "ingest_url","value": "http://127.0.0.1:5003"},
+    {"key": "http_token","value": "changeme"}
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {"name": "Login (form)", "request": {"method": "POST", "url": "{{base_url}}/login",
+          "body": {"mode": "urlencoded", "urlencoded": [
+            {"key": "username", "value": "{{username}}"},
+            {"key": "password", "value": "{{password}}"}
+          ]}}},
+        {"name": "Logout",       "request": {"method": "GET",  "url": "{{base_url}}/logout"}}
+      ]
+    },
+    {
+      "name": "Status",
+      "item": [
+        {"name": "Public status",   "request": {"method": "GET", "url": "{{base_url}}/api/status/public"}},
+        {"name": "Full status",     "request": {"method": "GET", "url": "{{base_url}}/api/status"}},
+        {"name": "Prometheus",      "request": {"method": "GET", "url": "{{base_url}}/metrics"}},
+        {"name": "History search",  "request": {"method": "GET",
+          "url": "{{base_url}}/api/history?limit=100&status=OK"}},
+        {"name": "History trend",   "request": {"method": "GET",
+          "url": "{{base_url}}/api/history/trend?hours=24"}}
+      ]
+    },
+    {
+      "name": "Config",
+      "item": [
+        {"name": "Get YAML",   "request": {"method": "GET", "url": "{{base_url}}/api/config"}},
+        {"name": "Save YAML",  "request": {"method": "POST","url": "{{base_url}}/api/config",
+          "header": [{"key": "Content-Type", "value": "application/json"}],
+          "body": {"mode": "raw", "raw": "{\"yaml\": \"log_level: INFO\"}"}}},
+        {"name": "SIGHUP reload", "request": {"method": "POST",
+          "url": "{{base_url}}/api/config/reload"}}
+      ]
+    },
+    {
+      "name": "Devices",
+      "item": [
+        {"name": "List",       "request": {"method": "GET",    "url": "{{base_url}}/api/devices"}},
+        {"name": "Read one",   "request": {"method": "GET",
+          "url": "{{base_url}}/api/devices/uc1000"}},
+        {"name": "Create",     "request": {"method": "POST",
+          "url": "{{base_url}}/api/devices/create",
+          "header": [{"key": "Content-Type", "value": "application/json"}],
+          "body": {"mode": "raw", "raw": "{\"id\":\"new-device\",\"transport\":\"tcp\",\"type\":\"mllp_hl7\",\"listen_port\":5100,\"display_name\":\"My Analyzer\"}"}}},
+        {"name": "Update",     "request": {"method": "PUT",
+          "url": "{{base_url}}/api/devices/uc1000",
+          "body": {"mode": "raw", "raw": "{\"enabled\": true, \"display_name\": \"UC-1000 modified\"}"}}},
+        {"name": "Enable",     "request": {"method": "POST",
+          "url": "{{base_url}}/api/devices/uc1000/enable",
+          "body": {"mode": "raw", "raw": "{\"enabled\": true}"}}},
+        {"name": "Archive",    "request": {"method": "POST",
+          "url": "{{base_url}}/api/devices/uc1000/archive"}},
+        {"name": "Archived",   "request": {"method": "GET",
+          "url": "{{base_url}}/api/devices/archived"}},
+        {"name": "Discover",   "request": {"method": "POST",
+          "url": "{{base_url}}/api/devices/discover",
+          "body": {"mode": "raw", "raw": "{\"tcp_range\":[\"192.168.1.0/24\"],\"tcp_ports\":[5000,5001]}"}}},
+        {"name": "Discovered", "request": {"method": "GET",
+          "url": "{{base_url}}/api/devices/discovered"}}
+      ]
+    },
+    {
+      "name": "Targets (PIS/LIS)",
+      "item": [
+        {"name": "Test dispatch", "request": {"method": "POST",
+          "url": "{{base_url}}/api/targets/vitomed/test"}},
+        {"name": "Preview HL7", "request": {"method": "POST",
+          "url": "{{base_url}}/api/targets/vitomed/preview"}}
+      ]
+    },
+    {
+      "name": "Dead-letter queue",
+      "item": [
+        {"name": "List",   "request": {"method": "GET",  "url": "{{base_url}}/api/dlq?limit=100"}},
+        {"name": "Read",   "request": {"method": "GET",  "url": "{{base_url}}/api/dlq/CTRL123"}},
+        {"name": "Replay", "request": {"method": "POST", "url": "{{base_url}}/api/dlq/CTRL123/replay"}}
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {"name": "List",   "request": {"method": "GET",    "url": "{{base_url}}/api/users"}},
+        {"name": "Create", "request": {"method": "POST",   "url": "{{base_url}}/api/users",
+          "body": {"mode": "raw", "raw": "{\"name\":\"nurse1\",\"password\":\"long-password-1234\",\"role\":\"viewer\"}"}}},
+        {"name": "Delete", "request": {"method": "DELETE", "url": "{{base_url}}/api/users/nurse1"}}
+      ]
+    },
+    {
+      "name": "Trace",
+      "item": [
+        {"name": "Devices", "request": {"method": "GET",
+          "url": "{{base_url}}/api/trace"}},
+        {"name": "Frames",  "request": {"method": "GET",
+          "url": "{{base_url}}/api/trace/LOC-200?limit=50"}}
+      ]
+    },
+    {
+      "name": "SLA",
+      "item": [
+        {"name": "JSON",  "request": {"method": "GET", "url": "{{base_url}}/api/sla/2025-08"}},
+        {"name": "HTML",  "request": {"method": "GET", "url": "{{base_url}}/api/sla/2025-08?format=html"}}
+      ]
+    },
+    {
+      "name": "HL7 ingestion (LOC-200)",
+      "item": [
+        {"name": "Push HL7 v2", "request": {"method": "POST",
+          "url": "{{ingest_url}}/",
+          "header": [
+            {"key": "Content-Type",  "value": "text/plain"},
+            {"key": "Authorization", "value": "Bearer {{http_token}}"}
+          ],
+          "body": {"mode": "raw", "raw": "MSH|^~\\&|LOC200|SIM|LIS|PRAXIS|20250101120000||ORU^R01|C1|P|2.5\rPID||PAT1|PAT1||Mueller^Hans||||M\rOBR|1|||S1^S1^L||20250101120000|20250101120000|||||||||||||F\rOBX|1|NM|1920-8^AST^LN|1|10|U/L|15^40|||||F"}}}
+      ]
+    }
+  ]
+}

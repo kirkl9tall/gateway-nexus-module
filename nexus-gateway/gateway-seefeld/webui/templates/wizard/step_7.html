@@ -1,0 +1,76 @@
+{% extends "wizard/base.html" %}
+{% block form %}
+<h2><span class="step-icon">7</span>Verifica finale e avvio</h2>
+<p class="intro">Ecco il riepilogo di quello che hai configurato. Se tutto è corretto, avvia il servizio.</p>
+
+<div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:16px;margin-bottom:24px;">
+  <h3 style="margin-top:0;">📋 Riepilogo configurazione</h3>
+  <table style="width:100%;font-size:0.9rem;">
+    <tr><td style="padding:4px 8px;color:#64748b;">Praxis:</td><td><b>{{ data.facility_name or '—' }}</b> ({{ data.facility_city or '—' }})</td></tr>
+    <tr><td style="padding:4px 8px;color:#64748b;">Lingua:</td><td>{{ data.language|upper }}</td></tr>
+    <tr><td style="padding:4px 8px;color:#64748b;">Fuso orario:</td><td>{{ data.timezone }}</td></tr>
+    <tr><td style="padding:4px 8px;color:#64748b;">Admin:</td><td>{{ data.admin_username or 'admin' }} ✓</td></tr>
+    <tr><td style="padding:4px 8px;color:#64748b;">IP del Pi:</td><td><b>{{ data.pi_ip }}</b></td></tr>
+    <tr><td style="padding:4px 8px;color:#64748b;">Primo analizzatore:</td><td><b>{{ data.first_device or '—' }}</b> (porta {{ data.first_device_port }})</td></tr>
+    <tr><td style="padding:4px 8px;color:#64748b;">Gestionale:</td><td><b>{{ data.target_name }}</b> → {{ data.target_host }}:{{ data.target_port }} ({{ data.target_kind }})</td></tr>
+    <tr><td style="padding:4px 8px;color:#64748b;">Backup:</td>
+        <td>{% if data.backup_kind and data.backup_kind != 'none' %}
+            <b>{{ data.backup_kind|upper }}</b> → {{ data.backup_path }}
+            {% if data.backup_gpg %}(cifrato GPG){% else %}<span style="color:#d97706">⚠ NON cifrato</span>{% endif %}
+        {% else %}
+            <span style="color:#dc2626">⚠ Disabilitato — consigliato solo per test</span>
+        {% endif %}</td>
+    </tr>
+  </table>
+</div>
+
+<form method="post" onsubmit="document.getElementById('final-btn').disabled=true;document.getElementById('final-btn').textContent='Salvo la configurazione…';">
+  <div class="actions">
+    <a href="{{ url_for('wizard.step_6') }}" class="btn btn-secondary">← Indietro</a>
+    <button id="final-btn" type="submit" class="btn btn-primary" style="font-size:1.05rem;padding:12px 28px;">
+      ✓ Salva e avvia il gateway
+    </button>
+  </div>
+</form>
+{% endblock %}
+
+{% block help %}
+<h3>🚀 Cosa succede al click "Salva e avvia"</h3>
+<ol>
+  <li>Scrivo <code>config/gateway.yaml</code> con tutte le tue scelte</li>
+  <li>Attivo il profilo del primo analizzatore</li>
+  <li>Il gateway si accorge del cambio config e si riavvia da solo</li>
+  <li>Vieni redirezionato alla <b>Dashboard</b></li>
+</ol>
+
+<h3>✅ Come verificare che funziona</h3>
+<ol>
+  <li>Sulla Dashboard, la tessera del primo analizzatore deve diventare <b>verde</b>
+  entro 10-30 secondi (indica che aspetta la connessione)</li>
+  <li>Chiedi al tecnico di puntare l'analizzatore all'IP <code>{{ data.pi_ip }}</code>
+  porta <code>{{ data.first_device_port }}</code></li>
+  <li>Fai un test sul device</li>
+  <li>Il risultato appare nella sezione <b>Risultati di oggi</b></li>
+  <li>Controlla che appaia anche nel gestionale del medico</li>
+</ol>
+
+<div class="callout">
+  <b>Se qualcosa non funziona:</b>
+  <ol>
+    <li>Menu <b>Log di sistema</b> — cerca errori in rosso</li>
+    <li>Menu <b>Trace protocollo</b> — vedi i byte grezzi ricevuti dal device</li>
+    <li>Menu <b>Dead-letter</b> — se ci sono messaggi bloccati con l'errore</li>
+    <li>Menu <b>Frame Inspector</b> — controlla trasformazioni sui valori</li>
+  </ol>
+</div>
+
+<h3>📞 Contatti supporto</h3>
+<p>Se sei bloccato, apri un ticket con:</p>
+<ul>
+  <li>Un <b>support bundle</b> (dal menu Log → "Scarica bundle")</li>
+  <li>Descrizione di cosa hai fatto e cosa non funziona</li>
+  <li>Screenshot del pannello</li>
+</ul>
+<p>Email: <code>support@jerumed-nexus.ch</code><br>
+Tel (business hours CET): <code>+41 78 402 05 99</code></p>
+{% endblock %}

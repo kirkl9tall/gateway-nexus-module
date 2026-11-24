@@ -1,0 +1,18 @@
+# Il gateway gira su Raspberry Pi (Linux). Tutti i file di testo devono avere
+# fine riga LF anche lavorando da Windows: se install.sh o le unit systemd
+# arrivano sul Pi con CRLF non partono ("bad interpreter: /bin/bash^M").
+* text=auto eol=lf
+
+# Binari: git non deve toccarli
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.webp binary
+*.ico  binary
+*.pdf  binary
+*.zip  binary
+*.gz   binary
+*.deb  binary
+*.woff binary
+*.woff2 binary

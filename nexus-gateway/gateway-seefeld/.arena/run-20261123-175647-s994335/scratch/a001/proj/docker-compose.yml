@@ -1,0 +1,67 @@
+version: "3.9"
+
+# JerumedNexus Gateway -- two services, one image.
+#
+#   docker compose up -d
+#   docker compose logs -f gateway webui
+#
+# Config lives under ./config (mounted read-write so setup wizard works).
+# State + logs are on named volumes so upgrades don't lose data.
+
+services:
+  gateway:
+    image: ghcr.io/jerumed-nexus/jerumednexus-gateway:1.1.0
+    build: .
+    container_name: jerumednexus-gateway
+    restart: unless-stopped
+    command: ["python", "main.py"]
+    environment:
+      LOG_FORMAT: json
+      LOG_LEVEL: INFO
+    env_file:
+      - ./config/secrets.env
+    volumes:
+      - ./config:/app/config
+      - loc200_logs:/app/logs
+      - loc200_state:/app/state
+    ports:
+      - "5003:5003"     # LOC-200 HTTP ingestion
+    devices:
+      - "/dev/ttyUSB0:/dev/ttyUSB0"     # uncomment/add as needed
+      - "/dev/ttyACM0:/dev/ttyACM0"
+    healthcheck:
+      test: ["CMD", "test", "-f", "/app/logs/health.json"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  webui:
+    image: ghcr.io/jerumed-nexus/jerumednexus-gateway:1.1.0
+    build: .
+    container_name: jerumednexus-webui
+    restart: unless-stopped
+    command:
+      - python
+      - -m
+      - flask
+      - --app
+      - webui.app
+      - run
+      - --host=0.0.0.0
+      - --port=8080
+      - --no-debug
+    env_file:
+      - ./config/secrets.env
+    volumes:
+      - ./config:/app/config
+      - loc200_logs:/app/logs
+      - loc200_state:/app/state
+    ports:
+      - "8080:8080"
+    depends_on:
+      - gateway
+
+volumes:
+  loc200_logs:
+  loc200_state:

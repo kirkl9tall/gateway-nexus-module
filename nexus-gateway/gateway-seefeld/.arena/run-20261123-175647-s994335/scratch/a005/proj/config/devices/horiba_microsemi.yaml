@@ -1,0 +1,17 @@
+id: horiba_microsemi
+type: sysmex_astm    # verified: Horiba uses unidirectional ASTM (LIS2-A2)
+enabled: false
+display_name: "Horiba Microsemi CRP"
+vendor: Horiba
+model: Microsemi CRP / LC-767G
+serial_port: "/dev/ttyUSB2"
+baudrate: 9600
+notes: |
+  Point-of-care ematologia + CRP, diffuso in praxis DACH.
+  Protocollo verificato (fonte: HORIBA product page + AQURE integration guide):
+    - Unidirectional ASTM (LIS2-A2 / E1381 low level, E1394 high level)
+    - Serial RS-232 o rete Ethernet
+    - Solo trasmissione risultati (no host query)
+  Il device manda: H, P, O, R, R, R, ... L record.
+  Il nostro adapter sysmex_astm gestisce ENQ/ACK/EOT.
+  Fonte: https://www.horiba.com/usa/healthcare/products/detail/action/show/Product/microsemi-crp-lc-767g-3302/

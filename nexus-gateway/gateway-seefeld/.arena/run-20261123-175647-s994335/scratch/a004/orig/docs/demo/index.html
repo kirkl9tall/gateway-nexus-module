@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>JerumedNexus Gateway — Demo Video (3 min)</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  :root {
+    --primary: #0891b2;
+    --success: #16a34a;
+    --warning: #d97706;
+    --danger:  #dc2626;
+    --bg:      #0f172a;
+    --panel:   #1e293b;
+    --border:  #334155;
+    --text:    #f1f5f9;
+    --muted:   #94a3b8;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text);
+                font-family: -apple-system,"Segoe UI",Roboto,Inter,sans-serif;
+                overflow: hidden; height: 100vh; }
+  .stage {
+    position: fixed; inset: 0;
+    display: grid;
+    grid-template-rows: 60px 1fr 100px;
+  }
+  header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; background: rgba(0,0,0,0.4); border-bottom: 1px solid var(--border);
+  }
+  header .brand { display: flex; align-items: center; gap: 12px; font-weight: 700; }
+  header .brand svg { color: var(--primary); }
+  header .chapter { font-size: 0.9rem; color: var(--muted); }
+  header .progress {
+    display: flex; gap: 4px; margin-left: 20px;
+  }
+  header .progress .step {
+    width: 30px; height: 4px; background: var(--border); border-radius: 2px;
+    transition: background 0.4s;
+  }
+  header .progress .step.done { background: var(--success); }
+  header .progress .step.active { background: var(--primary); }
+
+  main { position: relative; overflow: hidden; }
+  .scene {
+    position: absolute; inset: 24px;
+    opacity: 0; transform: translateY(20px);
+    transition: opacity 0.6s, transform 0.6s;
+    display: grid; gap: 20px;
+  }
+  .scene.active { opacity: 1; transform: translateY(0); }
+  .scene h1 { color: var(--primary); margin: 0; font-size: 1.8rem; }
+  .scene .subtitle { color: var(--muted); font-size: 1rem; margin-top: -12px; }
+  .scene .callout { background: rgba(217,119,6,0.15); border-left: 4px solid var(--warning);
+                     padding: 12px 16px; border-radius: 6px; font-size: 0.9rem; }
+
+  .card { background: var(--panel); border: 1px solid var(--border);
+           border-radius: 8px; padding: 20px; }
+  .terminal {
+    background: #000; color: #0f0; font-family: "SF Mono","Consolas",monospace;
+    padding: 20px; border-radius: 6px; font-size: 0.85rem;
+    line-height: 1.5; overflow: auto; max-height: 340px;
+  }
+  .terminal .prompt { color: #06b6d4; }
+  .terminal .log-info { color: #22c55e; }
+  .terminal .log-warn { color: #eab308; }
+  .terminal .log-error { color: #ef4444; }
+
+  .badge {
+    display: inline-block; padding: 3px 10px; border-radius: 12px;
+    font-size: 0.75rem; font-weight: 600; margin-right: 4px;
+  }
+  .badge.ok { background: rgba(34,197,94,0.2); color: #4ade80; }
+  .badge.warn { background: rgba(234,179,8,0.2); color: #fde047; }
+  .badge.danger { background: rgba(239,68,68,0.2); color: #fca5a5; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+
+  .flow {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px; gap: 12px;
+  }
+  .flow .node {
+    flex: 1; text-align: center; padding: 16px 8px;
+    background: var(--panel); border-radius: 8px; border: 2px solid var(--border);
+    font-size: 0.85rem;
+  }
+  .flow .node.active { border-color: var(--primary); }
+  .flow .arrow {
+    font-size: 1.5rem; color: var(--muted);
+    position: relative;
+  }
+  .flow .arrow::before {
+    content: "●"; color: var(--primary); position: absolute;
+    left: -8px; top: 3px; opacity: 0;
+    animation: flow 2s linear infinite;
+  }
+  @keyframes flow {
+    0%   { left: -8px; opacity: 0; }
+    20%  { opacity: 1; }
+    50%  { left: 40%; opacity: 1; }
+    80%  { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+  }
+  .scene.active .flow .arrow::before { animation-play-state: running; }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  table.data th, table.data td { padding: 8px 12px; text-align: left;
+                                   border-bottom: 1px solid var(--border); }
+  table.data th { color: var(--muted); font-weight: 500; font-size: 0.78rem;
+                   text-transform: uppercase; letter-spacing: 0.5px; }
+  table.data td.diff-old { color: #fca5a5; text-decoration: line-through; }
+  table.data td.diff-new { color: #4ade80; font-weight: 600; }
+
+  .qr-wrap { display: flex; gap: 24px; align-items: center;
+              padding: 24px; background: white; border-radius: 8px; color: #0f172a; }
+  .qr-wrap svg { width: 180px; height: 180px; }
+  .qr-wrap .hint { max-width: 300px; font-size: 0.85rem; }
+
+  .metric-tile { background: var(--panel); padding: 20px; border-radius: 8px;
+                  text-align: center; }
+  .metric-tile .value { font-size: 2.5rem; font-weight: 700; color: var(--primary); }
+  .metric-tile .label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase;
+                          letter-spacing: 1px; margin-top: 6px; }
+
+  footer {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 20px 24px; background: rgba(0,0,0,0.4);
+    border-top: 1px solid var(--border);
+  }
+  .narration {
+    flex: 1; font-size: 0.95rem; color: var(--text); font-style: italic;
+    padding-right: 24px;
+    max-width: 800px;
+  }
+  .controls { display: flex; gap: 8px; align-items: center; }
+  .controls button {
+    background: var(--panel); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 16px; border-radius: 6px; cursor: pointer; font-size: 0.9rem;
+    transition: background 0.15s;
+  }
+  .controls button:hover { background: var(--border); }
+  .controls button.primary { background: var(--primary); border-color: var(--primary); }
+  .controls .time { color: var(--muted); font-family: monospace; font-size: 0.85rem;
+                     min-width: 60px; text-align: right; }
+
+  /* Type-writer animation for terminal lines */
+  .typewrite { overflow: hidden; white-space: nowrap;
+                animation: type 1.2s steps(60, end); }
+  @keyframes type { from { max-width: 0; } to { max-width: 100%; } }
+</style>
+</head>
+<body>
+<div class="stage">
+  <header>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="brand">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2 L4 6 v6 c0 5 3.5 9.5 8 10 4.5-.5 8-5 8-10 V6 z"/>
+        </svg>
+        JerumedNexus Gateway
+      </div>
+      <span class="chapter" id="chapter">Introduzione</span>
+      <div class="progress" id="progress"></div>
+    </div>
+    <div style="color:var(--muted);font-size:0.85rem;">Demo v1.3.0 · 3 minuti</div>
+  </header>
+
+  <main id="main">
+    <!-- Scene 1: Intro -->
+    <div class="scene" data-scene="0">
+      <h1>Il problema</h1>
+      <div class="subtitle">Praxis con 5 analizzatori, 3 gestionali medici diversi, dati che non parlano.</div>
+      <div class="grid-3" style="margin-top:12px;">
+        <div class="card"><div style="font-size:2rem;">😞</div>
+          <b>Prima</b><br>
+          <span style="color:var(--muted);font-size:0.85rem;">
+            Trascrizione manuale, errori 5-10%, MPA perde 2h/giorno.
+          </span>
+        </div>
+        <div class="card"><div style="font-size:2rem;">🔥</div>
+          <b>Middleware concorrenti</b><br>
+          <span style="color:var(--muted);font-size:0.85rem;">
+            50k CHF setup, Windows Server dedicato, integrazione 4-8 settimane.
+          </span>
+        </div>
+        <div class="card" style="border-color:var(--primary);">
+          <div style="font-size:2rem;">✨</div>
+          <b>JerumedNexus</b><br>
+          <span style="color:var(--text);font-size:0.85rem;">
+            Un Pi, 15 min setup, zero code, 28 device supportati.
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 2: Wizard 7 passi -->
+    <div class="scene" data-scene="1">
+      <h1>Setup Wizard — 7 passi, zero codice</h1>
+      <div class="subtitle">La MPA installa senza chiamare l'IT.</div>
+      <div class="grid-2">
+        <div class="card">
+          <div style="font-weight:600;margin-bottom:12px;">
+            <span class="badge ok">Passo 4 di 7</span> Primo Analizzatore
+          </div>
+          <label style="display:block;font-size:0.85rem;color:var(--muted);margin-bottom:4px;">Modello</label>
+          <select style="width:100%;padding:8px;background:#000;border:1px solid var(--border);color:var(--text);border-radius:4px;">
+            <option>— seleziona modello —</option>
+            <option selected>Sysmex XQ-320 Hämatologie — sysmex_astm</option>
+          </select>
+          <label style="display:block;font-size:0.85rem;color:var(--muted);margin:12px 0 4px;">Nome sala</label>
+          <input type="text" value="Sysmex XQ-320 Sala Prelievi A"
+                 style="width:100%;padding:8px;background:#000;border:1px solid var(--border);color:var(--text);border-radius:4px;">
+          <label style="display:block;font-size:0.85rem;color:var(--muted);margin:12px 0 4px;">Porta TCP</label>
+          <input type="number" value="5006"
+                 style="width:100%;padding:8px;background:#000;border:1px solid var(--border);color:var(--text);border-radius:4px;">
+          <button style="margin-top:16px;background:var(--primary);color:#fff;border:none;padding:10px 20px;border-radius:6px;">
+            Aggiungi e avanti →
+          </button>
+        </div>
+        <div class="card" style="background:rgba(8,145,178,0.08);border-color:var(--primary);">
+          <div style="font-weight:600;color:var(--primary);margin-bottom:12px;">
+            💡 Guida contestuale
+          </div>
+          <div style="font-size:0.88rem;line-height:1.6;">
+            <p><b>Cosa fa questo passo:</b> creo un nuovo file YAML nella
+            cartella <code>config/devices/</code>. Il gateway apre la porta
+            TCP indicata e ascolta.</p>
+            <p><b>Cosa fa il tecnico Sysmex:</b><br>
+            IPU → Service → Host → <b>ASTM E1381-02 + ACK/NAK</b>,
+            Host IP = del Pi, Porta = 5006.</p>
+            <div class="callout" style="background:rgba(217,119,6,0.15);">
+              Se aggiungi una seconda XQ-320 in un'altra sala, usa porta 5007.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 3: Live topology -->
+    <div class="scene" data-scene="2">
+      <h1>Topology live — flusso dati animato</h1>
+      <div class="subtitle">Il medico vede in tempo reale ogni risultato che passa.</div>
+      <div class="flow">
+        <div class="node active">
+          <div style="font-size:1.5rem;">🩸</div>
+          <b>Sysmex XQ-320</b><br>
+          <small style="color:var(--muted);">Sala Prelievi A</small>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node active" style="border-color:var(--success);">
+          <div style="font-size:1.5rem;">⚙️</div>
+          <b>Gateway</b><br>
+          <small style="color:var(--muted);">Pi 5 · Raspberry</small>
+        </div>
+        <div class="arrow">→</div>
+        <div class="node active">
+          <div style="font-size:1.5rem;">🏥</div>
+          <b>Tomedo</b><br>
+          <small style="color:var(--muted);">P95 138ms</small>
+        </div>
+      </div>
+      <div class="grid-3" style="margin-top:20px;">
+        <div class="metric-tile"><div class="value">42</div><div class="label">Sample oggi</div></div>
+        <div class="metric-tile"><div class="value">138<span style="font-size:1.2rem;">ms</span></div><div class="label">Latency P95</div></div>
+        <div class="metric-tile"><div class="value">0</div><div class="label">DLQ backlog</div></div>
+      </div>
+    </div>
+
+    <!-- Scene 4: Frame Inspector -->
+    <div class="scene" data-scene="3">
+      <h1>Frame Inspector — prova che il gateway non modifica mai</h1>
+      <div class="subtitle">Il medico segnala un valore strano? In 30 secondi trovi la verità.</div>
+      <div class="card">
+        <div style="display:flex;gap:12px;align-items:center;margin-bottom:12px;">
+          <span style="font-family:monospace;background:#000;padding:2px 8px;border-radius:4px;">SN0102</span>
+          <span class="badge warn">warning</span>
+          <span style="margin-left:auto;font-size:0.8rem;color:var(--muted);">
+            SHA-256: 4aa67f51f13143b3...
+          </span>
+        </div>
+        <div class="callout">
+          <b>⚠ Warning conversione</b><br>
+          <code>HGB 42.0 out of physical range 2.0-25.0 g/dL</code>
+        </div>
+        <table class="data" style="margin-top:12px;">
+          <thead>
+            <tr><th>Analita</th><th>Valore raw</th><th>Valore inviato</th><th>Trasformazioni</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>WBC</td><td>7.4</td><td>7.4</td>
+              <td style="color:var(--muted);">— nessuna</td>
+            </tr>
+            <tr style="background:rgba(217,119,6,0.1);">
+              <td>HCT</td>
+              <td class="diff-old">0.42</td>
+              <td class="diff-new">42.0</td>
+              <td>HCT-frac-to-percent(×100)</td>
+            </tr>
+            <tr>
+              <td>HGB</td><td>42.0</td><td>42.0</td>
+              <td style="color:var(--danger);">⚠ implausibile → flag TC</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Scene 5: Wire replay -->
+    <div class="scene" data-scene="4">
+      <h1>Time-travel wire replay</h1>
+      <div class="subtitle">Riesegui qualsiasi frame catturato dal wire in sandbox — nessun tocco alla produzione.</div>
+      <div class="terminal">
+<span class="log-info">=== TIME-TRAVEL REPLAY ===</span>
+
+[Step 1] Raw payload received
+  bytes_hex: 487c5c5e267c7c7c58512d3332305e...
+  byte_count: 289
+
+[Step 2] ASCII decode
+  preview: H|\^&|||XQ-320^00-00^11001||||||||E1394-97
+           P|1||PAT-42||Muster^Anna||19850101|F
+           O|1||SN0042||R
+           R|1|^^^^WBC^1|7.4|10*3/uL||N
+
+[Step 3] Parsed by sysmex_astm
+  sample_id: SN0042
+  analytes: 5
+
+<span class="log-info">[Step 4] HL7 v2 built</span>
+  size: 512
+  preview: MSH|^~\&|Sysmex XQ-320|...
+
+[Step 5] Conversion audit built
+  warnings: []
+  changes: 5
+
+<span class="log-info">✓ Replay complete — no production side-effects</span>
+      </div>
+    </div>
+
+    <!-- Scene 6: 28 device -->
+    <div class="scene" data-scene="5">
+      <h1>28 device pronti, universo estensibile</h1>
+      <div class="subtitle">Aggiungere un device nuovo = 1 file YAML, zero codice Python.</div>
+      <div class="grid-3">
+        <div class="card"><b>💎 PLATINUM (3)</b><br>
+          <div style="margin-top:8px;font-size:0.85rem;color:var(--muted);">
+            Sysmex XQ-320<br>Cobas b101<br>UC-1000</div>
+        </div>
+        <div class="card"><b>🟢 GOLD (1)</b><br>
+          <div style="margin-top:8px;font-size:0.85rem;color:var(--muted);">Seamaty SMT-120</div>
+        </div>
+        <div class="card"><b>🟡 SILVER (15)</b><br>
+          <div style="margin-top:8px;font-size:0.85rem;color:var(--muted);">
+            Bio-Rad, Roche c111, Sysmex XN,<br>Mindray, PixCell, i-STAT…</div>
+        </div>
+      </div>
+      <div class="terminal" style="margin-top:20px;">
+<span class="prompt">$</span> cat config/protocols/menarini_ha_8180t.yaml
+protocol_name: menarini_ha_8180t
+transport: rs232
+records:
+  observation:
+    pattern: "^R\\|"
+    fields:
+      analyte: {index: 2, split: "^", pick: 3}
+      value:   {index: 3}
+
+<span class="prompt">$</span> sudo systemctl reload jerumednexus-gateway
+<span class="log-info">[✓] New device profile loaded. Ready.</span>
+      </div>
+    </div>
+
+    <!-- Scene 7: QR onboarding -->
+    <div class="scene" data-scene="6">
+      <h1>Onboarding: scan → done</h1>
+      <div class="subtitle">Il tecnico Sysmex scansiona il QR dal telefono, apre la pagina verify.</div>
+      <div class="qr-wrap">
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+          <rect width="100" height="100" fill="white"/>
+          <g fill="black">
+            <rect x="10" y="10" width="20" height="20"/>
+            <rect x="14" y="14" width="12" height="12" fill="white"/>
+            <rect x="18" y="18" width="4" height="4" fill="black"/>
+            <rect x="70" y="10" width="20" height="20"/>
+            <rect x="74" y="14" width="12" height="12" fill="white"/>
+            <rect x="78" y="18" width="4" height="4" fill="black"/>
+            <rect x="10" y="70" width="20" height="20"/>
+            <rect x="14" y="74" width="12" height="12" fill="white"/>
+            <rect x="18" y="78" width="4" height="4" fill="black"/>
+            <rect x="35" y="35" width="4" height="4"/>
+            <rect x="40" y="35" width="4" height="4"/>
+            <rect x="35" y="40" width="4" height="4"/>
+            <rect x="45" y="40" width="4" height="4"/>
+            <rect x="50" y="35" width="4" height="4"/>
+            <rect x="55" y="45" width="4" height="4"/>
+            <rect x="40" y="50" width="4" height="4"/>
+            <rect x="60" y="60" width="4" height="4"/>
+            <rect x="65" y="55" width="4" height="4"/>
+            <rect x="45" y="65" width="4" height="4"/>
+            <rect x="55" y="70" width="4" height="4"/>
+          </g>
+        </svg>
+        <div class="hint">
+          <div style="font-weight:700;color:#0f172a;font-size:1.1rem;">Sysmex XQ-320 Sala A</div>
+          <div style="margin-top:8px;">Scansiona con il telefono per aprire<br>la pagina verify dal Web UI.</div>
+          <div style="margin-top:12px;font-family:monospace;font-size:0.75rem;color:#64748b;">
+            http://pi.local:8088/onboard/sysmex_xq320_sala_a
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 8: Chiusura -->
+    <div class="scene" data-scene="7">
+      <h1>JerumedNexus Gateway</h1>
+      <div class="subtitle">Un Pi, 15 min, 28 device, ~85% meno costoso della concorrenza.</div>
+      <div class="grid-3" style="margin-top:24px;">
+        <div class="metric-tile"><div class="value">165</div><div class="label">Test verdi in CI</div></div>
+        <div class="metric-tile"><div class="value">28</div><div class="label">Device supportati</div></div>
+        <div class="metric-tile"><div class="value">v1.3</div><div class="label">Stable ora</div></div>
+      </div>
+      <div style="text-align:center;margin-top:32px;font-size:1.1rem;color:var(--muted);">
+        Prova gratuita a Zurich / Basel / Bern / Vienna / München<br>
+        <a href="mailto:info@jerumed-nexus.ch" style="color:var(--primary);text-decoration:none;">
+          info@jerumed-nexus.ch
+        </a> · +41 78 402 05 99
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    <div class="narration" id="narration">…</div>
+    <div class="controls">
+      <button id="btnPrev">◀ Prev</button>
+      <button id="btnPlay" class="primary">▶ Play</button>
+      <button id="btnNext">Next ▶</button>
+      <span class="time" id="time">0:00 / 3:00</span>
+    </div>
+  </footer>
+</div>
+
+<script>
+const SCENES = [
+  { chapter: "Introduzione",     duration: 15,
+    narration: "Immagina una praxis con 5 analizzatori e 3 gestionali diversi. Ogni MPA perde due ore al giorno a trascrivere risultati. Ecco perché esiste JerumedNexus Gateway." },
+  { chapter: "Setup Wizard",     duration: 20,
+    narration: "In sette passi guidati, con pannello di aiuto contestuale accanto ad ogni form, la MPA installa il gateway. Zero terminale, zero YAML." },
+  { chapter: "Topology live",    duration: 20,
+    narration: "Una mappa animata mostra ogni risultato che passa dal device al gestionale in tempo reale. Il medico vede la latenza P95 in millisecondi." },
+  { chapter: "Frame Inspector",  duration: 25,
+    narration: "Ogni singolo valore trasformato è tracciato con hash SHA-256 del payload raw. Se il medico segnala un valore strano, in trenta secondi trovi la verità con prova crittografica." },
+  { chapter: "Wire Replay",      duration: 20,
+    narration: "Riesegui qualsiasi frame catturato dal wire in sandbox — zero rischio produzione. Perfetto per il team supporto: bug isolation in un click." },
+  { chapter: "Catalogo device",  duration: 20,
+    narration: "Ventotto device pronti con badge di certificazione — Platinum, Gold, Silver, Bronze — e un DSL YAML per aggiungerne di nuovi in venti minuti senza codice." },
+  { chapter: "QR onboarding",    duration: 20,
+    narration: "Il tecnico Sysmex scansiona il codice QR dal telefono e apre direttamente la pagina di verifica del device. Zero typing, zero errori." },
+  { chapter: "Chiudiamo",        duration: 20,
+    narration: "Centosessantacinque test verdi, ventotto device supportati, ottantacinque percento più economico della concorrenza. Prenota una demo a Zurigo, Basilea, Berna o Vienna." },
+];
+const TOTAL = SCENES.reduce((s, x) => s + x.duration, 0);
+
+let currentIdx = 0;
+let playing = false;
+let sceneStart = 0;
+let raf = null;
+
+function renderProgress() {
+  const el = document.getElementById('progress');
+  el.innerHTML = SCENES.map((_, i) =>
+    `<div class="step ${i < currentIdx ? 'done' : i === currentIdx ? 'active' : ''}"></div>`
+  ).join('');
+}
+function go(idx) {
+  currentIdx = Math.max(0, Math.min(SCENES.length - 1, idx));
+  document.querySelectorAll('.scene').forEach(el => el.classList.remove('active'));
+  const s = document.querySelector(`[data-scene="${currentIdx}"]`);
+  if (s) s.classList.add('active');
+  document.getElementById('chapter').textContent = SCENES[currentIdx].chapter;
+  document.getElementById('narration').textContent = SCENES[currentIdx].narration;
+  renderProgress();
+  sceneStart = Date.now();
+}
+function fmt(sec) {
+  const m = Math.floor(sec / 60);
+  const s = Math.floor(sec % 60).toString().padStart(2, '0');
+  return `${m}:${s}`;
+}
+function tick() {
+  const elapsed = (Date.now() - sceneStart) / 1000;
+  const past = SCENES.slice(0, currentIdx).reduce((s, x) => s + x.duration, 0);
+  const total = past + Math.min(elapsed, SCENES[currentIdx].duration);
+  document.getElementById('time').textContent = `${fmt(total)} / ${fmt(TOTAL)}`;
+  if (playing && elapsed >= SCENES[currentIdx].duration) {
+    if (currentIdx < SCENES.length - 1) {
+      go(currentIdx + 1);
+    } else {
+      playing = false;
+      document.getElementById('btnPlay').textContent = '▶ Replay';
+    }
+  }
+  if (playing) raf = requestAnimationFrame(tick);
+}
+document.getElementById('btnPlay').onclick = () => {
+  playing = !playing;
+  document.getElementById('btnPlay').textContent = playing ? '⏸ Pause' : '▶ Play';
+  if (playing) {
+    if (currentIdx === SCENES.length - 1) go(0);
+    sceneStart = Date.now();
+    tick();
+  } else if (raf) {
+    cancelAnimationFrame(raf);
+  }
+};
+document.getElementById('btnPrev').onclick = () => { go(currentIdx - 1); sceneStart = Date.now(); };
+document.getElementById('btnNext').onclick = () => { go(currentIdx + 1); sceneStart = Date.now(); };
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') document.getElementById('btnPrev').click();
+  if (e.key === 'ArrowRight') document.getElementById('btnNext').click();
+  if (e.key === ' ') { e.preventDefault(); document.getElementById('btnPlay').click(); }
+});
+
+go(0);
+</script>
+</body>
+</html>

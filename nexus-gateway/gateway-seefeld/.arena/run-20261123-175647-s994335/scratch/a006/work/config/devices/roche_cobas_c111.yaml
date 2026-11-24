@@ -1,0 +1,23 @@
+id: roche_cobas_c111
+type: sysmex_astm    # verified: Cobas c111 uses Roche-specific ASTM, NOT HL7 MLLP
+enabled: false
+display_name: "Roche Cobas c 111 Chemie"
+vendor: Roche
+model: Cobas c 111
+serial_port: "/dev/ttyUSB3"
+baudrate: 9600
+read_timeout_seconds: 15   # Roche-specific ENQ timeout window
+notes: |
+  Chimica clinica benchtop, comune in praxis DACH.
+  Protocollo verificato (fonti: LISBridge, senaite.astm test fixtures,
+  Cobas c111 Host Interface Manual v3.0):
+    - Roche-specific ASTM (LIS2-A2) via RS-232 o TCP/IP
+    - Timeout ENQ specifico Roche: 15 secondi
+    - Record: H|\^&|... con sender = manufacturer + tipo + versione SW + versione protocol + serial
+    - Solo trasmissione risultati (uni-directional per default), host-query opzionale
+  Il nostro adapter sysmex_astm implementa il framing E1381 compatibile,
+  ma il timeout Roche di 15s va configurato lato Pi (default 30s).
+  Fonti:
+    - https://lisbridge.com/instruments/cobas-c311
+    - https://github.com/senaite/senaite.astm (test fixture: cobas_c111.txt)
+    - Cobas c111 Host Interface Manual v3.0 (Roche)

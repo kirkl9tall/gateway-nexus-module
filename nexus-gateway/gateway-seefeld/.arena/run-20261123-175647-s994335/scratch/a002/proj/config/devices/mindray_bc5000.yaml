@@ -1,0 +1,15 @@
+id: mindray_bc5000
+type: mllp_hl7
+enabled: false
+display_name: "Mindray BC-5000 (5-diff Hematology)"
+vendor: Mindray
+model: BC-5000
+listen_host: "0.0.0.0"
+listen_port: 5060
+notes: |
+  Ematologia 5-part-diff, popolare in praxis DACH per rapporto costo/qualita.
+  Protocollo verificato (fonte: Mindray BC-5000 datasheet):
+    - HL7 v2 bi-directional via USB o LAN
+    - 23 parametri + 3 istogrammi/scattergrammi
+    - 40 campioni/ora
+  Fonte: https://www.mindray.com/in/products/laboratory-diagnostics/hematology/5-part-differential-analyzers/bc-5000/

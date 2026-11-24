@@ -1,0 +1,102 @@
+    /* ── Header ──────────────────────────────────────────────────────────
+       One rule makes overlap impossible: the header is a WRAPPING flex row
+       with no fixed height. When brand + gateway pill + tools do not fit on
+       one line (phone, tablet, zoom 150 %, long names), the next item moves
+       to a new line instead of sliding under its neighbour. Nothing is
+       absolutely positioned and the header is not sticky, so its height can
+       change freely. */
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--line);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+      padding: 12px 24px; min-height: 72px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem;
+      color: var(--ink); text-decoration: none; white-space: nowrap; min-height: 44px; }
+    .brand img { height: 30px; width: auto; flex: none; }
+    .brand span { color: var(--ink-3); font-weight: 400; }
+    .hdr-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 10px;
+      border-radius: 999px; font-weight: 700; font-size: 1rem; white-space: nowrap; text-decoration: none;
+      background: var(--neutral-tint); color: var(--neutral); }
+    .hdr-pill svg { width: 24px; height: 24px; flex: none; }
+    .hdr-pill .i { display: none; }
+    .hdr-pill.wait .i-wait, .hdr-pill.on .i-on, .hdr-pill.off .i-off { display: inline-flex; }
+    .hdr-pill.on  { background: var(--good-tint); color: var(--good); }
+    .hdr-pill.off { background: var(--crit-tint); color: var(--crit); }
+    a.hdr-pill { background: var(--warn-tint); color: var(--warn); }
+    a.hdr-pill[hidden] { display: none; }
+    .hdr-tools { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .hdr-user { color: var(--ink-2); max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .topbar .lang-picker { min-height: 44px; border-radius: 8px; background: var(--surface); }
+    .topbar .lang-picker select { min-height: 42px; font-size: 1rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+    .dot.green { background: var(--good); } .dot.red { background: var(--crit); } .dot.grey { background: var(--neutral); }
+    .btn-icon {
+      width: 44px; height: 44px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--surface); color: var(--ink-2); cursor: pointer; flex: none;
+      display: flex; align-items: center; justify-content: center; text-decoration: none;
+    }
+    .btn-icon:hover { border-color: var(--brand); color: var(--brand); }
+
+    /* ── Menu ────────────────────────────────────────────────────────────
+       Phone and tablet (< 1024 px): the four doctor entries are big buttons
+       under the header, ALL visible at once (2 x 2 on phones, 4 in a row on
+       tablets). No hamburger to discover, no sideways scrolling.
+       Desktop (>= 1024 px): the same links become a left sidebar that stays
+       in view while the page scrolls. Same markup, CSS only, no JavaScript. */
+    .shell { display: block; }
+    .sidebar { background: var(--surface); border-bottom: 1px solid var(--line); }
+    .sidebar nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px 16px; }
+    .nav-link {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      min-height: 72px; padding: 8px 6px; border-radius: var(--radius); border: 2px solid transparent;
+      color: var(--ink); text-decoration: none; font-size: 1rem; line-height: 1.2; text-align: center;
+      overflow-wrap: break-word; hyphens: auto; min-width: 0; position: relative;
+    }
+    .nav-link:hover { background: var(--page); color: var(--ink); }
+    .nav-link.active { background: var(--brand-tint); color: var(--brand-2); font-weight: 700; border-color: var(--brand); }
+    .nav-link svg { flex-shrink: 0; width: 26px; height: 26px; }
+    .nav-badge { font-size: 0.8rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; color: #fff; display: none; }
+    .nav-link .nav-badge { position: absolute; top: 6px; right: 6px; }
+    .tech-nav { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+    .nav-section { flex-basis: 100%; font-size: 0.9rem; color: var(--ink-3); }
+    .tech-nav .nav-link { flex-direction: row; min-height: 44px; padding: 6px 12px; font-size: 0.95rem; color: var(--ink-2);
+      border: 1px solid var(--line); gap: 8px; }
+    .tech-nav .nav-link.active { border-color: var(--brand); color: var(--brand-2); }
+    .tech-nav .nav-link svg { width: 18px; height: 18px; }
+    .tech-nav .nav-link .nav-badge { position: static; }
+    .sidebar-footer { display: none; }
+    .device-info { font-size: 0.85rem; color: var(--ink-3); line-height: 1.6; overflow-wrap: anywhere; }
+    body[data-view="studio"] .tech-only { display: none !important; }
+    body[data-view="tech"]   .studio-only { display: none !important; }
+
+    @media (min-width: 600px) {
+      .sidebar nav { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 10px 24px; }
+    }
+    @media (min-width: 1024px) {
+      .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); align-items: start; }
+      .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;
+        border-bottom: 0; border-right: 1px solid var(--line); }
+      .sidebar nav { display: flex; flex-direction: column; gap: 4px; padding: 16px 12px; flex: 1; }
+      .nav-link { flex-direction: row; justify-content: flex-start; gap: 14px; min-height: 56px; padding: 10px 14px;
+        font-size: 1.1rem; text-align: left; border-width: 0 0 0 4px; border-radius: 0 var(--radius) var(--radius) 0; }
+      .nav-link .nav-badge { position: static; margin-left: auto; }
+      .tech-nav { display: block; border-top: 0; padding-top: 0; }
+      .nav-section { padding: 20px 14px 6px; }
+      .tech-nav .nav-link { min-height: 44px; font-size: 0.95rem; border: 0; border-left: 4px solid transparent; }
+      .tech-nav .nav-link.active { border-left-color: var(--brand); }
+      .sidebar-footer { display: block; padding: 14px 24px; border-top: 1px solid var(--line); }
+    }
+    @media (max-width: 599px) {
+      .topbar { padding: 8px 16px; gap: 8px 12px; }
+      .brand span, .hdr-user, .topbar .lang-picker svg { display: none; }
+    }
+
+    /* ── Main ── */
+    .main { min-width: 0; }
+    .content { padding: 28px 40px 64px; max-width: 1280px; width: 100%; }
+    @media (max-width: 1023px) { .content { padding: 20px 24px 48px; } }
+    @media (max-width: 599px)  { .content { padding: 16px 16px 40px; } }
+    .page-kicker { font-size: 0.9rem; color: var(--ink-3); }
+    .page-h1 { font-weight: 700; font-size: 2rem; line-height: 1.15; margin: 2px 0 18px; overflow-wrap: break-word; }
+    .page-desc { color: var(--ink-2); max-width: 68ch; margin-top: -8px; margin-bottom: 20px; }
+    img, svg, video, canvas { max-width: 100%; }

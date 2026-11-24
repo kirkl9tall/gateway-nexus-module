@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Modifica apparecchio") if editing else t("Aggiungi un apparecchio") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+{# Add / edit a machine in three steps:
+     1. which machine (picked from the catalog; skipped when editing)
+     2. how it is connected (USB or network) — filled in from the profile and
+        from the USB cable the gateway detected
+     3. its name
+   Everything technical (id, protocol, baud rate, listen address) is filled in
+   automatically and kept in "Advanced settings". #}
+
+<h1 class="page-h1">{{ t("Modifica apparecchio") if editing else t("Aggiungi un apparecchio") }}</h1>
+<p class="page-desc">{{ t("Scegli l'apparecchio: il gateway compila da solo il resto.") if not editing else t("Cambia come è collegato o il nome che vedi nel pannello.") }}</p>
+
+{% if not editing %}
+{# ── Step 1: which machine ── #}
+<section class="df-step" id="step-1">
+  <h2><span class="df-num">1</span>{{ t("Quale apparecchio vuoi collegare?") }}</h2>
+
+  <div class="df-usb-found" id="usb-found" hidden>
+    <strong>{{ t("Abbiamo trovato un apparecchio collegato via USB") }}</strong>
+    <span id="usb-found-text"></span>
+    <button class="btn btn-primary" type="button" id="usb-found-use">{{ t("Sì, è questo") }}</button>
+  </div>
+
+  <label class="df-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    <input type="search" id="df-search" placeholder="{{ t('Cerca: marca o modello, per esempio Sysmex') }}" autocomplete="off">
+  </label>
+
+  <div class="df-tiles" id="df-tiles" role="radiogroup" aria-label="{{ t('Quale apparecchio vuoi collegare?') }}">
+    {% for d in catalog %}
+    <button type="button" class="df-tile" role="radio" aria-checked="false" data-id="{{ d.id }}"
+            data-search="{{ (d.name ~ ' ' ~ d.vendor ~ ' ' ~ d.model)|lower }}">
+      <span class="df-tile-vendor">{{ d.vendor }}</span>
+      <strong>{{ d.name }}</strong>
+      <span class="df-tile-kind">{{ t(d.kind) }}</span>
+      {% if d.enabled %}<span class="chip good df-tile-on">{{ t("Già collegato") }}</span>{% endif %}
+    </button>
+    {% endfor %}
+    <button type="button" class="df-tile df-tile-other" role="radio" aria-checked="false" data-id="__other__"
+            data-search="altro other andere autre">
+      <strong>{{ t("Un altro apparecchio") }}</strong>
+      <span class="df-tile-kind">{{ t("Non è nella lista") }}</span>
+    </button>
+  </div>
+  <p class="ov-empty" id="df-noresult" hidden>{{ t("Nessun apparecchio trovato. Scegli «Un altro apparecchio».") }}</p>
+</section>
+{% endif %}
+
+{# ── Step 2: how it is connected ── #}
+<section class="df-step" id="step-2" {% if not editing %}hidden{% endif %}>
+  <h2><span class="df-num">{{ 1 if editing else 2 }}</span>{{ t("Come è collegato al gateway?") }}</h2>
+  <div class="df-choice" role="radiogroup">
+    <button type="button" class="df-option" id="tr-usb" data-t="usb" role="radio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 2v14"/><circle cx="12" cy="19" r="3"/><path d="M12 8l-5 3v2"/><path d="M12 6l5 3v2"/><rect x="5.5" y="13" width="3" height="3"/><circle cx="17" cy="12.5" r="1.5"/></svg>
+      <strong>{{ t("Cavo USB") }}</strong>
+      <span>{{ t("Il cavo va dall'apparecchio alla scatola del gateway.") }}</span>
+    </button>
+    <button type="button" class="df-option" id="tr-tcp" data-t="tcp" role="radio">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="3" y="3" width="18" height="12" rx="2"/><path d="M8 21h8M12 15v6"/></svg>
+      <strong>{{ t("Cavo di rete") }}</strong>
+      <span>{{ t("L'apparecchio è nella rete dello studio e invia al gateway.") }}</span>
+    </button>
+  </div>
+
+  <div id="params-usb" class="df-detail" hidden>
+    <label class="form-label" for="serial_port">{{ t("Presa USB") }}</label>
+    <select id="serial_port_pick" class="form-control"></select>
+    <p class="df-help" id="usb-help"></p>
+  </div>
+
+  <div id="params-tcp" class="df-detail" hidden>
+    <p class="df-help">{{ t("Sull'apparecchio, nelle impostazioni di comunicazione (spesso «Host» o «LIS»), scrivi:") }}</p>
+    <div class="df-address">
+      <div><span>{{ t("Indirizzo") }}</span><b id="show-address">{{ gateway_address }}</b></div>
+      <div><span>{{ t("Porta") }}</span><b id="show-port">—</b></div>
+      <button type="button" class="btn" id="copy-address">{{ t("Copia") }}</button>
+    </div>
+    <p class="df-help">{{ t("Se non trovi queste impostazioni, chiedi al tecnico dell'apparecchio: gli bastano questi due valori.") }}</p>
+  </div>
+</section>
+
+{# ── Step 3: name ── #}
+<section class="df-step" id="step-3" {% if not editing %}hidden{% endif %}>
+  <h2><span class="df-num">{{ 2 if editing else 3 }}</span>{{ t("Come vuoi chiamarlo?") }}</h2>
+  <label class="form-label" for="display_name">{{ t("Nome che vedi nel pannello") }}</label>
+  <input id="display_name" class="form-control df-big-input" value="{{ device.display_name or '' }}" maxlength="80">
+
+  <details class="df-advanced">
+    <summary>{{ t("Impostazioni avanzate (per il tecnico)") }}</summary>
+    <div class="df-grid">
+      <div><label class="form-label" for="dev_id">{{ t("ID interno") }}</label>
+        <input id="dev_id" class="form-control mono" value="{{ device.id or '' }}" {% if editing %}readonly{% endif %}>
+        <p class="df-help">{{ t("Solo lettere minuscole, numeri, - e _ (2-40).") }}</p></div>
+      <div><label class="form-label" for="dev_type">{{ t("Protocollo") }}</label>
+        <select id="dev_type" class="form-control">
+          {% for v, label in [("mllp_hl7", "HL7 v2 MLLP"), ("sysmex_astm", "ASTM E1381 (Sysmex, Horiba…)"),
+                              ("uc1000_serial", "UC-1000"), ("cobas_poct", "POCT1-A (Cobas b101, Afinion…)"),
+                              ("reflotron_serial", "Reflotron"), ("loc200_serial", "LOC-200 RS-232")] %}
+          <option value="{{ v }}" {% if device.type == v %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select></div>
+      <div><label class="form-label" for="vendor">{{ t("Marca") }}</label>
+        <input id="vendor" class="form-control" value="{{ device.vendor or '' }}"></div>
+      <div><label class="form-label" for="model">{{ t("Modello") }}</label>
+        <input id="model" class="form-control" value="{{ device.model or '' }}"></div>
+      <div><label class="form-label" for="listen_port">{{ t("Porta di rete") }}</label>
+        <input id="listen_port" class="form-control mono" type="number" min="1024" max="65535" value="{{ device.listen_port or '' }}"></div>
+      <div><label class="form-label" for="listen_host">{{ t("Indirizzo di ascolto") }}</label>
+        <input id="listen_host" class="form-control mono" value="{{ device.listen_host or '0.0.0.0' }}"></div>
+      <div><label class="form-label" for="serial_port">{{ t("Percorso seriale") }}</label>
+        <input id="serial_port" class="form-control mono" value="{{ device.serial_port or '' }}"></div>
+      <div><label class="form-label" for="baudrate">{{ t("Velocità seriale (baud)") }}</label>
+        <select id="baudrate" class="form-control">
+          {% for b in [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200] %}
+          <option value="{{ b }}" {% if (device.baudrate or 9600) == b %}selected{% endif %}>{{ b }}</option>
+          {% endfor %}
+        </select></div>
+    </div>
+  </details>
+</section>
+
+<div class="df-actions" id="df-actions" {% if not editing %}hidden{% endif %}>
+  <a href="/analyzers" class="btn">{{ t("Annulla") }}</a>
+  {% if editing %}
+  <button type="button" class="btn btn-danger" onclick="archiveDevice()">{{ t("Rimuovi l'apparecchio") }}</button>
+  {% endif %}
+  <button type="button" class="btn btn-primary btn-lg" id="df-save" onclick="saveDevice()">
+    {{ t("Salva") if editing else t("Collega l'apparecchio") }}
+  </button>
+</div>
+
+<section class="df-done" id="df-done" hidden aria-live="polite">
+  <h2>{{ t("Fatto. Ora fai un'analisi di prova.") }}</h2>
+  <p>{{ t("Quando il risultato arriva, l'apparecchio diventa verde nella pagina Apparecchi.") }}</p>
+  <p class="df-help" id="df-restart"></p>
+  <a href="/analyzers" class="btn btn-primary btn-lg">{{ t("Vai agli apparecchi") }}</a>
+</section>
+
+<script>
+(function () {
+  var CATALOG = {{ catalog|tojson }};
+  var PORTS_IN_USE = {{ ports_in_use|tojson }};
+  var EDITING = {{ 'true' if editing else 'false' }};
+  var picked = EDITING ? {id: {{ (device.id or '')|tojson }}, fromCatalog: true} : null;
+  var transport = "{{ 'usb' if device.serial_port else 'tcp' }}";
+  var usbDevices = [];   // what the gateway detects on its USB ports
+  var $ = function (id) { return document.getElementById(id); };
+
+  function freePort(wanted) {
+    var p = parseInt(wanted, 10) || 5100;
+    while (PORTS_IN_USE.indexOf(p) !== -1) p++;
+    return p;
+  }
+
+  // ── Step 1: tiles + search ──
+  function pick(id) {
+    document.querySelectorAll('.df-tile').forEach(function (b) {
+      var on = b.dataset.id === id;
+      b.classList.toggle('selected', on);
+      b.setAttribute('aria-checked', on ? 'true' : 'false');
+    });
+    var d = CATALOG.find(function (x) { return x.id === id; });
+    if (d) {
+      picked = {id: d.id, fromCatalog: true};
+      $('display_name').value = d.name;
+      $('dev_id').value = d.id; $('dev_id').readOnly = true;
+      $('vendor').value = d.vendor; $('model').value = d.model;
+      $('dev_type').value = d.type;
+      $('baudrate').value = String(d.baudrate || 9600);
+      $('listen_port').value = d.listen_port ? freePort(d.listen_port) : freePort(5100);
+      $('serial_port').value = d.serial_port || '';
+      setTransport(d.link === 'usb' ? 'usb' : 'tcp');
+    } else {                                 // "another machine": manual
+      picked = {id: '', fromCatalog: false};
+      $('display_name').value = ''; $('dev_id').value = ''; $('dev_id').readOnly = false;
+      $('vendor').value = ''; $('model').value = ''; $('dev_type').value = 'mllp_hl7';
+      $('listen_port').value = freePort(5100);
+      document.querySelector('.df-advanced').open = true;
+      setTransport('tcp');
+    }
+    ['step-2', 'step-3', 'df-actions'].forEach(function (s) { $(s).hidden = false; });
+    $('step-2').scrollIntoView({behavior: 'smooth', block: 'start'});
+  }
+  document.querySelectorAll('.df-tile').forEach(function (b) {
+    b.addEventListener('click', function () { pick(b.dataset.id); });
+  });
+  var search = $('df-search');
+  if (search) search.addEventListener('input', function () {
+    var q = search.value.trim().toLowerCase(), shown = 0;
+    document.querySelectorAll('.df-tile').forEach(function (b) {
+      var ok = !q || b.dataset.search.indexOf(q) !== -1 || b.dataset.id === '__other__';
+      b.hidden = !ok; if (ok && b.dataset.id !== '__other__') shown++;
+    });
+    $('df-noresult').hidden = shown > 0;
+  });
+
+  // ── Step 2: USB or network ──
+  function setTransport(t) {
+    transport = t;
+    ['usb', 'tcp'].forEach(function (k) {
+      var el = $('tr-' + k);
+      el.classList.toggle('selected', k === t);
+      el.setAttribute('aria-checked', k === t ? 'true' : 'false');
+    });
+    $('params-usb').hidden = t !== 'usb';
+    $('params-tcp').hidden = t !== 'tcp';
+    if (t === 'tcp' && !$('listen_port').value) $('listen_port').value = freePort(5100);
+    $('show-port').textContent = $('listen_port').value || '—';
+    fillUsbChoices();
+  }
+  $('tr-usb').addEventListener('click', function () { setTransport('usb'); });
+  $('tr-tcp').addEventListener('click', function () { setTransport('tcp'); });
+  $('listen_port').addEventListener('input', function () { $('show-port').textContent = this.value || '—'; });
+  $('copy-address').addEventListener('click', function () {
+    var txt = $('show-address').textContent + ':' + $('show-port').textContent;
+    (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject())
+      .then(function () { toast(T('Copiato: {testo}', {testo: txt})); })
+      .catch(function () { toast(txt); });
+  });
+
+  function fillUsbChoices() {
+    var sel = $('serial_port_pick'), current = $('serial_port').value;
+    sel.innerHTML = '';
+    usbDevices.forEach(function (u) {
+      var o = document.createElement('option');
+      o.value = u.location;
+      o.textContent = (u.display_name || u.vendor || T('Cavo USB')) + ' — ' + u.location;
+      sel.appendChild(o);
+    });
+    if (current && !usbDevices.some(function (u) { return u.location === current; })) {
+      var o = document.createElement('option');
+      o.value = current; o.textContent = current + ' (' + T('non collegato ora') + ')';
+      sel.appendChild(o);
+    }
+    if (!sel.options.length) {
+      var e = document.createElement('option');
+      e.value = ''; e.textContent = T('Nessun cavo USB trovato');
+      sel.appendChild(e);
+    }
+    if (current) sel.value = current;
+    if (!sel.value && sel.options.length) sel.selectedIndex = 0;
+    $('serial_port').value = sel.value;
+    $('usb-help').textContent = usbDevices.length
+      ? T('Il gateway vede {n} cavo/i USB. Se non sei sicuro, stacca e riattacca il cavo: la lista si aggiorna.', {n: usbDevices.length})
+      : T("Inserisci il cavo USB nel gateway e aspetta qualche secondo.");
+  }
+  $('serial_port_pick').addEventListener('change', function () { $('serial_port').value = this.value; });
+
+  // Ask the gateway which USB cables it sees; suggest the newest one.
+  async function refreshUsb() {
+    try {
+      var r = await fetch('/api/devices/discovered', {credentials: 'same-origin'});
+      if (!r.ok) return;
+      var d = await r.json();
+      usbDevices = (d.devices || []).filter(function (x) { return (x.location || '').indexOf('/dev/') === 0; });
+      fillUsbChoices();
+      var p = (d.pending || []).find(function (x) { return (x.location || '').indexOf('/dev/') === 0; });
+      if (!EDITING && p && !picked && $('usb-found')) {
+        var guess = CATALOG.find(function (c) {
+          var hay = (c.name + ' ' + c.vendor + ' ' + c.model).toLowerCase();
+          return (p.display_name && hay.indexOf(String(p.display_name).toLowerCase()) !== -1) ||
+                 (p.device_type && c.type === p.device_type && c.link === 'usb');
+        });
+        $('usb-found-text').textContent = (p.display_name || p.vendor || T('dispositivo generico')) +
+          ' — ' + p.location + (guess ? ' → ' + guess.name : '');
+        $('usb-found').hidden = false;
+        $('usb-found-use').onclick = function () {
+          pick(guess ? guess.id : '__other__');
+          $('serial_port').value = p.location;
+          setTransport('usb');
+        };
+      }
+    } catch (e) { /* no USB info: the user can still choose */ }
+  }
+  refreshUsb();
+  setInterval(refreshUsb, 5000);
+
+  // ── Save ──
+  window.saveDevice = async function () {
+    var name = $('display_name').value.trim();
+    if (!name) { toast(T('Scrivi un nome per l\'apparecchio.'), 'error'); $('display_name').focus(); return; }
+    if (transport === 'usb' && !$('serial_port').value) {
+      toast(T("Inserisci il cavo USB nel gateway e aspetta qualche secondo."), 'error'); return;
+    }
+    var body = {
+      transport: transport, display_name: name, enabled: true,
+      serial_port: $('serial_port').value.trim(), baudrate: parseInt($('baudrate').value, 10),
+      listen_host: $('listen_host').value.trim() || '0.0.0.0', listen_port: parseInt($('listen_port').value, 10),
+    };
+    var url;
+    if (picked && picked.fromCatalog) {
+      url = '/api/devices/' + encodeURIComponent(picked.id) + '/connect';
+    } else {
+      url = '/api/devices/create';
+      body.id = $('dev_id').value.trim() ||
+        name.toLowerCase().normalize('NFD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40);
+      body.type = $('dev_type').value; body.vendor = $('vendor').value.trim(); body.model = $('model').value.trim();
+    }
+    $('df-save').disabled = true;
+    try {
+      var r = await fetch(url, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      var d = await r.json();
+      if (!d.ok) {
+        var msg = d.code === 'port_in_use' ? T('Questa porta è già usata da un altro apparecchio. Scegline un\'altra nelle impostazioni avanzate.')
+                : r.status === 409 ? T('Esiste già un apparecchio con questo ID. Cambialo nelle impostazioni avanzate.')
+                : T('Errore: {msg}', {msg: d.error || T('operazione non riuscita')});
+        toast(msg, 'error'); $('df-save').disabled = false; return;
+      }
+      // New machines are opened when the gateway restarts.
+      var rr = await fetch('/api/service/restart', {method: 'POST'}).then(function (x) { return x.json(); }).catch(function () { return {}; });
+      $('df-restart').textContent = rr.ok ? T('Il gateway si è riavviato per usare il nuovo apparecchio.')
+                                          : T('Riavvia il gateway (spegni e riaccendi la scatola grigia) per usare il nuovo apparecchio.');
+      ['step-1', 'step-2', 'step-3', 'df-actions'].forEach(function (s) { if ($(s)) $(s).hidden = true; });
+      $('df-done').hidden = false;
+      $('df-done').scrollIntoView({behavior: 'smooth'});
+    } catch (e) {
+      toast(T('Errore di rete: {msg}', {msg: e.message}), 'error'); $('df-save').disabled = false;
+    }
+  };
+
+  window.archiveDevice = async function () {
+    var devId = $('dev_id').value;
+    if (!confirm(T('Rimuovere «{nome}»? Potrai ripristinarlo dall\'archivio.', {nome: $('display_name').value || devId}))) return;
+    try {
+      var r = await fetch('/api/devices/' + encodeURIComponent(devId) + '/archive', {method: 'POST'});
+      var d = await r.json();
+      if (d.ok) { toast(T('Apparecchio rimosso.')); setTimeout(function () { location.href = '/analyzers'; }, 900); }
+      else toast(T('Errore: {msg}', {msg: d.error || T('operazione non riuscita')}), 'error');
+    } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message}), 'error'); }
+  };
+
+  if (EDITING) { setTransport(transport); $('show-port').textContent = $('listen_port').value || '—'; }
+})();
+</script>
+{% endblock %}

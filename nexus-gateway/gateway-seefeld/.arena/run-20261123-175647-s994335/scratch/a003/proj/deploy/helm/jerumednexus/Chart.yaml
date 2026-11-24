@@ -1,0 +1,22 @@
+apiVersion: v2
+name: jerumednexus-gateway
+description: JerumedNexus Gateway — HL7 v2.5 / FHIR R4 gateway for laboratory analyzers.
+type: application
+version: 1.3.0
+appVersion: "1.3.0"
+kubeVersion: ">= 1.26.0"
+home: https://docs.jerumednexus.example
+sources:
+  - https://github.com/jerumed-nexus/jerumednexus-gateway
+keywords:
+  - hl7
+  - fhir
+  - laboratory
+  - healthcare
+  - lis
+maintainers:
+  - name: Jerumed Nexus GmbH
+    email: engineering@jerumed-nexus.ch
+annotations:
+  category: Healthcare
+  licenses: Proprietary

@@ -1,0 +1,62 @@
+{% extends "wizard/base.html" %}
+{% block form %}
+<h2><span class="step-icon">3</span>Rete locale</h2>
+<p class="intro">Verifichiamo che il Pi sia raggiungibile dalla tua rete.</p>
+
+<form method="post">
+  <label>Indirizzo IP del Pi <small>(rilevato automaticamente)</small></label>
+  <input type="text" name="pi_ip" value="{{ data.pi_ip or detected_ip }}">
+  <p class="hint">Questo è l'indirizzo che dovrai puntare sugli analizzatori
+  quando il tecnico configura l'IPU.</p>
+
+  <label>Indirizzo del gestionale (opzionale, per test)</label>
+  <input type="text" name="lis_hint"
+         placeholder="es. 192.168.1.50 (Tomedo server)"
+         value="{{ data.lis_hint or '' }}">
+  <button type="button" class="btn btn-test"
+          onclick="testTcp(document.querySelector('input[name=lis_hint]').value, 2575, 'lis-test')">
+    Verifica raggiungibilità (:2575)
+  </button>
+  <div id="lis-test" class="test-result"></div>
+
+  <div class="actions">
+    <a href="{{ url_for('wizard.step_2') }}" class="btn btn-secondary">← Indietro</a>
+    <button type="submit" class="btn btn-primary">Avanti →</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block help %}
+<h3>🌐 Cosa fa questo passo</h3>
+<p>Salviamo l'indirizzo IP del Pi (che diventerà quello che gli analizzatori chiamano)
+e verifichiamo che tu possa raggiungere il gestionale.</p>
+
+<h3>📌 Indirizzo IP</h3>
+<p>Ho rilevato: <b>{{ detected_ip }}</b></p>
+<p>Se è sbagliato — es. il Pi ha due interfacce di rete — sovrascrivilo. Chiedi
+all'IT dello studio quale IP il router assegna al Pi.</p>
+
+<div class="callout">
+  <b>Suggerimento:</b> chiedi all'IT di configurare il router perché al Pi
+  venga sempre assegnato lo <b>stesso IP</b> (DHCP reservation). Se il Pi cambia
+  IP dopo un reboot, gli analizzatori non lo trovano più.
+</div>
+
+<h3>🔍 Come trovo l'IP del gestionale?</h3>
+<ol>
+  <li>Vai sul PC del medico dove è installato Tomedo/Vitomed/curaMED</li>
+  <li>Apri il prompt: <kbd>Win+R</kbd> → <code>cmd</code></li>
+  <li>Digita <code>ipconfig</code></li>
+  <li>Copia "Indirizzo IPv4" (di solito 192.168.x.x)</li>
+</ol>
+<p>La porta standard MLLP è <b>2575</b>. Se il gestionale usa una porta diversa,
+la imposteremo al passo 5.</p>
+
+<h3>⚠️ Se il test fallisce</h3>
+<ul>
+  <li>Il gestionale è acceso?</li>
+  <li>C'è un firewall che blocca la porta 2575?</li>
+  <li>L'IP è corretto?</li>
+</ul>
+<p>Puoi comunque procedere e sistemarlo dopo — questo test è solo informativo.</p>
+{% endblock %}

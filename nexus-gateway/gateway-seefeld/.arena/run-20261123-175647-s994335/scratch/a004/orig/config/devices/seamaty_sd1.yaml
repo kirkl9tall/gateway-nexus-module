@@ -1,0 +1,12 @@
+id: seamaty_sd1
+type: mllp_hl7
+enabled: false
+display_name: "Seamaty SD1 Chemie POCT"
+vendor: Seamaty
+model: SD1
+listen_host: "0.0.0.0"
+listen_port: 6001
+notes: >
+  Seamaty SD1 dry-chemistry POCT analyzer. HL7 v2 over MLLP (TCP).
+  Configurare sul menu del device: LIS Interface -> HL7, indirizzo del Pi,
+  porta 6001. Documentazione: config/devices/seamaty_sd1.yaml

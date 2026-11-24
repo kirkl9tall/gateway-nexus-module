@@ -1,0 +1,7 @@
+id: cobas_b101
+type: cobas_poct
+enabled: false
+display_name: "Roche Cobas b 101 (POCT)"
+vendor: Roche
+model: Cobas b 101
+serial_port: "/dev/ttyACM0"

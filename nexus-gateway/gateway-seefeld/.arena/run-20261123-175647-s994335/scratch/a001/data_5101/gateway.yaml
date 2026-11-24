@@ -1,0 +1,10 @@
+
+devices:
+  - {id: sysmex_xq320, type: sysmex_astm, enabled: true, display_name: Sysmex XQ-320, listen_port: 5001}
+  - {id: uc1000, type: uc1000_serial, enabled: true, display_name: UC-1000, serial_port: /dev/missing}
+  - {id: cobas_b101, type: cobas_poct, enabled: true, display_name: Cobas b 101, serial_port: /dev/null}
+  - {id: smt120, type: mllp_hl7, enabled: true, display_name: Seamaty SMT-120 Chemie-Analysegeraet, listen_port: 6000}
+targets:
+  - {name: Tomedo, type: tomedo, enabled: true, sftp_host: 10.0.0.2}
+  - {name: Praxisarchiv-Netzwerkfreigabe, type: file_drop, enabled: true, watch_folder: /tmp}
+praxis: {name: Test}

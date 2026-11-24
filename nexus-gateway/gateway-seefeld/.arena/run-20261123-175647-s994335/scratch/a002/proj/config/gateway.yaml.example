@@ -1,0 +1,193 @@
+# ============================================================
+#  JerumedNexus Gateway  --  Configuration File  (v1.1)
+#
+#  Copy:  config/gateway.yaml.example -> config/gateway.yaml
+#  Chmod: 640, owner loc200:loc200
+#
+#  Secrets (SFTP passwords, HTTP tokens) MUST live in
+#  config/secrets.env (mode 600) or as environment variables --
+#  NEVER inline them below.  Ref names:
+#    LOC200_HTTP_TOKEN          -- HTTP ingestion Bearer token
+#    <TARGET>_SFTP_HOST/USER/PASS   -- per-target SFTP creds
+#      e.g. TOMEDO_SFTP_PASS
+# ============================================================
+
+log_level: "INFO"          # DEBUG | INFO | WARNING | ERROR
+log_file:  "logs/gateway.log"
+
+# ── LOC-200 primary analyzer ────────────────────────────────────
+loc200:
+  # serial | network | wifi | http
+  #   http     -> LOC-200 pushes HL7/JSON via POST to gateway (recommended)
+  #   serial   -> RS-232 USB adapter
+  #   network  -> LOC-200 RJ45 (gateway opens outbound TCP)
+  #   wifi     -> same as network on LOC-200 WLAN interface
+  connection_type: "http"
+  http_port: 5003
+
+  serial:
+    port: "/dev/ttyUSB0"
+    baudrate: 9600
+    bytesize: 8
+    parity: "N"
+    stopbits: 1.0
+    timeout: 10.0
+
+  network:
+    host: "192.168.1.100"
+    port: 5000
+    timeout: 10.0
+    reconnect_delay: 5.0
+
+  wifi:
+    host: "192.168.1.101"
+    port: 5000
+    timeout: 15.0
+    reconnect_delay: 5.0
+
+  debug_raw_frames: false
+  poll_interval: 1.0
+
+# ── HL7 settings ────────────────────────────────────────────────
+hl7:
+  version: "2.5"
+  sending_application: "LOC200_GW"      # <= 20 chars per HL7 v2.5 MSH-3
+  sending_facility:    "PRAXIS_NAME"    # <-- change to your practice
+  receiving_application: "LIS"
+  receiving_facility:    "PRAXIS_NAME"
+  loinc_map_path: "config/loinc_map.yaml"
+
+  # MSH-18 charset -- must match how the message is encoded on the wire.
+  #   UNICODE UTF-8  (default, safe for German umlauts)
+  #   8859/1         (legacy LIS that expect ISO-8859-1 only)
+  #   ASCII          (strict 7-bit)
+  charset: "UNICODE UTF-8"
+
+  # Include local %z timezone offset in HL7 timestamps
+  # (e.g. 20250825120000+0200)
+  include_timezone: true
+
+# ── Internal queue & retry ──────────────────────────────────────
+queue_maxsize: 500
+retry_max_attempts: 5
+retry_delay_seconds: 5.0
+
+# ============================================================
+#  DEVICES  --  unified device list (v1.1+)
+#
+#  Devices detected by the plug-and-play scanner are auto-added
+#  here when activated from the Web UI (Analizzatori page).
+#  Manual entries also honoured.
+#
+#  Supported ``type`` values:
+#    sysmex_astm      -- Sysmex XP-300 / pocH-100i (ASTM E1381 over TCP)
+#    mllp_hl7         -- Any HL7 v2 MLLP listener (XQ-320, Horiba, Seamaty)
+#    uc1000_serial    -- Menarini UC-1000 urinalysis
+#    cobas_poct       -- Roche Cobas b101 (USB CDC)
+# ============================================================
+devices: []
+  # - id: "sysmex_xp300"
+  #   type: "sysmex_astm"
+  #   enabled: true
+  #   display_name: "Sysmex XP-300 Haematologie"
+  #   listen_host: "0.0.0.0"
+  #   listen_port: 5000
+  #   strip_id_suffix: true
+  #
+  # - id: "seamaty_smt120"
+  #   type: "mllp_hl7"
+  #   enabled: true
+  #   display_name: "Seamaty SMT-120"
+  #   listen_host: "0.0.0.0"
+  #   listen_port: 6000
+  #
+  # - id: "uc1000"
+  #   type: "uc1000_serial"
+  #   enabled: true
+  #   display_name: "UC-1000 Urinstatus"
+  #   serial_port: "/dev/loc200/ch340-A1B2C3"     # udev-stable symlink
+  #   baudrate: 9600
+
+# ============================================================
+#  TARGETS  --  where results are dispatched (fan-out)
+#
+#  Enable one or more; the same result is sent to every enabled target.
+# ============================================================
+targets:
+
+  # ── Vitomed / Vitodata --------------------------------------
+  - name: "vitomed"
+    type: "vitomed"
+    enabled: false
+    host: "192.168.1.50"
+    port: 6661
+    mllp_timeout: 15.0
+
+  # ── curaMED (Swisscom Health) -------------------------------
+  - name: "curamed"
+    type: "curamed"
+    enabled: false
+    host: "192.168.1.51"
+    port: 6662
+    mllp_timeout: 15.0
+
+  # ── Aeskulap (CompuGroup Medical) ---------------------------
+  - name: "aeskulap"
+    type: "aeskulap"
+    enabled: false
+    host: "192.168.1.52"
+    port: 6663
+    mllp_timeout: 15.0
+
+  # ── Axenita (Axon Lab AG) -----------------------------------
+  - name: "axenita"
+    type: "axenita"
+    enabled: false
+    host: "192.168.1.53"
+    port: 6664
+    mllp_timeout: 15.0
+
+  # ── WinMed (TMR AG) -- File-drop ----------------------------
+  - name: "winmed"
+    type: "winmed"
+    enabled: false
+    watch_folder: "/mnt/winmed/Laboreingang"
+    file_extension: ".hl7"
+    file_encoding: "utf-8"
+
+  # ── DnaMed --------------------------------------------------
+  - name: "dnamed"
+    type: "dnamed"
+    enabled: false
+    host: "192.168.1.54"
+    port: 6665
+    mllp_timeout: 15.0
+
+  # ── Tomedo (zollsoft) ---------------------------------------
+  # Two delivery modes:
+  #   1. SFTP (recommended for remote practices) -- credentials via secrets.env
+  #        TOMEDO_SFTP_HOST=sftp.tomedo.example
+  #        TOMEDO_SFTP_USER=labbridge
+  #        TOMEDO_SFTP_PASS=<strong-password>
+  #   2. File-drop (SMB / NFS mount on the Pi)
+  - name: "tomedo"
+    type: "tomedo"
+    enabled: false
+    # -- SFTP --
+    # sftp_host: "sftp.tomedo.example"
+    # sftp_port: 22
+    # sftp_user: "labbridge"        # resolved from TOMEDO_SFTP_USER if secret set
+    # sftp_pass: "PLACEHOLDER"      # NEVER put a real password here
+    # sftp_remote_path: "/import"
+    # -- File-drop --
+    watch_folder: "/mnt/tomedo/labor_import"
+    file_extension: ".hl7"
+    file_encoding: "utf-8"
+
+  # ── Generic HL7 MLLP (any standard LIS) ---------------------
+  - name: "generic_lis"
+    type: "generic_hl7_mllp"
+    enabled: false
+    host: "192.168.1.55"
+    port: 2575
+    mllp_timeout: 15.0

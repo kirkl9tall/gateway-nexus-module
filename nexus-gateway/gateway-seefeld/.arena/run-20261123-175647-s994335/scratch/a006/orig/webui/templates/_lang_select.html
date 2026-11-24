@@ -1,0 +1,14 @@
+{# Language picker: full names, big enough to read. Changing it reloads the
+   same page in the new language (cookie set by /lang/<code>). #}
+<label class="lang-picker" title="Lingua · Sprache · Langue · Language">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  <select id="lang-select" onchange="setLang(this.value)" aria-label="Lingua · Sprache · Langue · Language">
+    {% for code, name in LANGS.items() %}
+    <option value="{{ code }}" {% if code == current_lang() %}selected{% endif %}>{{ name }}</option>
+    {% endfor %}
+  </select>
+</label>
+<style>
+  .lang-picker { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border, #cfd0d3); padding:0 4px 0 8px; color:var(--text2, #4a4c4f); }
+  .lang-picker select { font:inherit; font-size:0.95rem; min-height:34px; padding:2px 4px; border:0; background:transparent; color:var(--text, #1d1f20); cursor:pointer; }
+</style>

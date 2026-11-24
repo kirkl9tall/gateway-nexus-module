@@ -1,0 +1,12 @@
+id: sysmex_xn550
+type: sysmex_astm
+enabled: false
+display_name: "Sysmex XN-550 Hämatologie"
+vendor: Sysmex
+model: XN-550
+listen_host: "0.0.0.0"
+listen_port: 5011
+strip_id_suffix: true
+notes: |
+  Diffuso in laboratori medi/grandi DACH. Successore della XN-330.
+  Protocollo: ASTM E1381 su TCP.

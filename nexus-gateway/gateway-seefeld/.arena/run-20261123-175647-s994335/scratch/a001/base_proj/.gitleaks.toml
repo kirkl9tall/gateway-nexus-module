@@ -1,0 +1,32 @@
+# gitleaks.toml — extends default with lab-domain patterns
+
+title = "JerumedNexus Gateway gitleaks config"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "jerumednexus-fernet-key"
+description = "Fernet encryption key committed"
+regex = '''(?i)fernet[_-]?key\s*[:=]\s*['"][A-Za-z0-9_-]{40,}['"]'''
+tags = ["key", "fernet"]
+
+[[rules]]
+id = "jerumednexus-license-key"
+description = "License private key material"
+regex = '''-----BEGIN (RSA )?PRIVATE KEY-----'''
+tags = ["key", "pki"]
+
+[[rules]]
+id = "jerumednexus-hardcoded-patient-id"
+description = "Clear-text patient ID pattern"
+regex = '''(?i)patient[_-]?id\s*[:=]\s*['"](?!PAT-?TEST|EXAMPLE|00000)[A-Z]{2,4}[- ]?\d{3,}['"]'''
+tags = ["pii"]
+
+[allowlist]
+description = "Allow test fixtures"
+paths = [
+    '''tests/fixtures/.*''',
+    '''docs/devices/RESEARCH\.md''',
+    '''docs/adr/.*''',
+]

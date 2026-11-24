@@ -1,0 +1,11 @@
+id: siemens_clinitek_novus
+type: mllp_hl7
+enabled: false
+display_name: "Siemens CLINITEK Novus (Urine Analyzer)"
+vendor: Siemens Healthineers
+model: CLINITEK Novus
+listen_host: "0.0.0.0"
+listen_port: 5061
+notes: |
+  Analizzatore automatico strisce urine. Comune in laboratori medi.
+  Protocollo: HL7 v2 MLLP.

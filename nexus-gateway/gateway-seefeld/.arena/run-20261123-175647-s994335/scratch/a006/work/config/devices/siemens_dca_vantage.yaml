@@ -1,0 +1,11 @@
+id: siemens_dca_vantage
+type: mllp_hl7
+enabled: false
+display_name: "Siemens DCA Vantage (HbA1c/uACR)"
+vendor: Siemens Healthineers
+model: DCA Vantage
+listen_host: "0.0.0.0"
+listen_port: 5060
+notes: |
+  POCT HbA1c e Albumina/Creatinina urinaria. Molto diffuso in praxis diabetologiche DACH.
+  Protocollo: HL7 v2 MLLP.

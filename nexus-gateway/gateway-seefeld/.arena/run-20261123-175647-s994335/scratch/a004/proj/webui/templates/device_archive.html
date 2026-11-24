@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Archivio device — JerumedNexus{% endblock %}
+{% block page_title %}Archivio device{% endblock %}
+{% block content %}
+
+<style>
+.arch-desc{font-size:12px;color:var(--text3);font-family:var(--mono);margin-bottom:12px}
+.arch-table{width:100%;border-collapse:collapse;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.arch-table th{font-size:10px;font-weight:600;color:var(--text3);text-align:left;padding:10px 14px;
+               background:var(--bg3);border-bottom:1px solid var(--border);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.arch-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);font-family:var(--mono);font-size:12px}
+.arch-btn{font-size:11px;padding:5px 12px;border:1px solid rgba(0,229,160,0.4);
+          border-radius:6px;background:rgba(0,229,160,0.08);color:#00e5a0;cursor:pointer;font-family:var(--mono)}
+.empty{padding:40px;text-align:center;color:var(--text3);font-family:var(--mono);font-size:13px}
+</style>
+
+<div class="arch-desc">
+  I device archiviati sono spostati in <code>config/devices/_archive/</code> — <b>non</b> cancellati.
+  Ripristina quando vuoi. Solo un admin del sistema può rimuoverli definitivamente via SSH.
+</div>
+
+<div id="arch-container">
+  <div class="empty">Caricamento…</div>
+</div>
+
+<script>
+async function load() {
+  try {
+    const r = await fetch('/api/devices/archived');
+    const d = await r.json();
+    render(d.entries || []);
+  } catch (e) {
+    document.getElementById('arch-container').innerHTML =
+      '<div class="empty" style="color:#f60">errore: ' + e + '</div>';
+  }
+}
+function render(entries) {
+  const c = document.getElementById('arch-container');
+  if (!entries.length) {
+    c.innerHTML = '<div class="empty">Archivio vuoto</div>'; return;
+  }
+  let html = '<table class="arch-table"><thead><tr>' +
+             '<th>File archiviato</th><th>ID</th><th>Display</th><th>Vendor · Modello</th>' +
+             '<th>Type</th><th>Azione</th></tr></thead><tbody>';
+  entries.forEach(e => {
+    html += `<tr>
+      <td>${e._file}</td>
+      <td>${e.id || ''}</td>
+      <td>${e.display_name || ''}</td>
+      <td>${e.vendor || ''}${e.vendor && e.model ? ' · ' : ''}${e.model || ''}</td>
+      <td>${e.type || ''}</td>
+      <td><button class="arch-btn" onclick="restore('${e._file}')">Ripristina</button></td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  c.innerHTML = html;
+}
+async function restore(filename) {
+  if (!confirm('Ripristinare ' + filename + ' nel catalogo attivo?')) return;
+  try {
+    const r = await fetch('/api/devices/archived/' + encodeURIComponent(filename) + '/restore',
+                          {method: 'POST'});
+    const d = await r.json();
+    if (d.ok) { toast('Ripristinato: ' + d.restored_as, 'success'); load(); }
+    else toast('Errore: ' + (d.error || 'restore fallito'), 'error');
+  } catch (e) { toast('Errore: ' + e, 'error'); }
+}
+load();
+</script>
+{% endblock %}

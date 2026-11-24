@@ -1,0 +1,31 @@
+Source: jerumednexus-gateway
+Section: net
+Priority: optional
+Maintainer: Jerumed Nexus GmbH <info@jerumed-nexus.ch>
+Build-Depends: debhelper-compat (= 13), dh-python, python3-all
+Standards-Version: 4.6.2
+Homepage: https://jerumed-nexus.ch
+
+Package: jerumednexus-gateway
+Architecture: all
+Depends:
+ ${misc:Depends},
+ python3 (>= 3.9),
+ python3-venv,
+ python3-pip,
+ systemd,
+ adduser,
+ rsync,
+ curl,
+ ca-certificates,
+ ufw,
+ logrotate
+Description: LOC-200 to HL7 v2.5 Laboratory Gateway
+ Reads results from LOCMEDT LOC-200 (and Sysmex, Cobas, Horiba, UC-1000,
+ Seamaty) laboratory analyzers via RS-232, TCP or HTTP, converts them to
+ HL7 v2.5 ORU^R01 messages, and dispatches them via MLLP, file-drop or
+ SFTP to practice information systems (Vitomed, curaMED, Aeskulap,
+ Axenita, WinMed, DnaMed, Tomedo).
+ .
+ Plug-and-play device detection, hardened web UI, and enterprise-grade
+ audit logging for nDSG / GDPR compliance.

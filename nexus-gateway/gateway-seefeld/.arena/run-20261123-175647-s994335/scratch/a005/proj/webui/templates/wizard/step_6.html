@@ -1,0 +1,80 @@
+{% extends "wizard/base.html" %}
+{% block form %}
+<h2><span class="step-icon">6</span>Backup</h2>
+<p class="intro">Configura un backup automatico dei dati del gateway. <b>Fortemente consigliato.</b></p>
+
+<form method="post">
+  <label>Tipo di backup</label>
+  <select name="backup_kind" onchange="toggleBackupFields(this.value)">
+    <option value="none">Nessun backup (solo per test)</option>
+    <option value="nas" selected>Cartella di rete (NAS/Samba/CIFS)</option>
+    <option value="s3">Object storage S3 (AWS/Backblaze/Wasabi)</option>
+  </select>
+
+  <div id="backup-fields">
+    <label>Percorso di destinazione <small>(già montato sul Pi)</small></label>
+    <input type="text" name="backup_path"
+           placeholder="es. /mnt/nas/jerumednexus"
+           value="{{ data.backup_path or '/mnt/nas/jerumednexus' }}">
+    <p class="hint">Se il NAS non è ancora montato, chiedi all'IT di aggiungerlo
+    in <code>/etc/fstab</code>. Il backup fallirà silenziosamente se il path non esiste.</p>
+
+    <label>Chiave GPG per cifrare i backup <small>(opzionale ma consigliato)</small></label>
+    <input type="text" name="backup_gpg"
+           placeholder="es. backup@clinica.example"
+           value="{{ data.backup_gpg or '' }}">
+    <p class="hint">Se lasci vuoto, i backup saranno in chiaro. Con GPG, solo chi
+    ha la chiave privata può leggerli — <b>anche il vendor no</b>.</p>
+  </div>
+
+  <div class="actions">
+    <a href="{{ url_for('wizard.step_5') }}" class="btn btn-secondary">← Indietro</a>
+    <button type="submit" class="btn btn-primary">Avanti →</button>
+  </div>
+</form>
+
+<script>
+function toggleBackupFields(kind) {
+  document.getElementById('backup-fields').style.display = kind === 'none' ? 'none' : 'block';
+}
+toggleBackupFields(document.querySelector('select[name=backup_kind]').value);
+</script>
+{% endblock %}
+
+{% block help %}
+<h3>💾 Cosa fa questo passo</h3>
+<p>Configuro un backup automatico giornaliero (di notte, ora 02:15) di:</p>
+<ul>
+  <li>Configurazione del gateway</li>
+  <li>Cronologia dispatch (chi ha mandato cosa, quando)</li>
+  <li>Audit log</li>
+  <li>Dead-letter queue (messaggi non arrivati)</li>
+  <li>Chiavi di cifratura</li>
+</ul>
+<p>Se il Pi si rompe, con un backup recente ripristini <b>tutto</b> su un Pi nuovo in 2 ore
+(vedi <b>Disaster Recovery runbook</b>).</p>
+
+<div class="callout">
+  <b>Regola d'oro medica:</b> il backup <b>non testato</b> non esiste.
+  Il gateway include uno script <code>verify_backup.sh</code> che ogni mese
+  ripristina l'ultimo backup in una cartella temporanea e verifica l'integrità.
+  <b>Chiedi all'IT di schedulare quello script</b> nel cron mensile.
+</div>
+
+<h3>🔐 Cifratura GPG</h3>
+<p>Se il NAS è condiviso con altri servizi della clinica o backup off-site,
+<b>cifra i backup</b>. In pratica:</p>
+<ol>
+  <li>Chi installa deve avere una chiave GPG personale</li>
+  <li>Il gateway cifra ogni backup con quella chiave pubblica</li>
+  <li>Solo quella persona (con la chiave privata) può decifrare</li>
+  <li>Il vendor <b>NON</b> può leggere il backup — è sicuro per GDPR/nDSG</li>
+</ol>
+<p>Se non sai cos'è GPG, chiedi all'IT o al DPO. Per praxis piccole,
+il rischio è basso (NAS interno) — puoi anche saltare per adesso.</p>
+
+<h3>🌐 Backup off-site (opzionale)</h3>
+<p>Per la massima protezione (ransomware-proof): un secondo backup su
+<b>Backblaze B2</b> o <b>Cubbit</b> (fornitori EU) con object-lock.
+Costa ~5 EUR/mese. Da configurare dopo, dal menu <b>Backup</b>.</p>
+{% endblock %}

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+{% block title %}Utenti — JerumedNexus{% endblock %}
+{% block page_title %}Gestione utenti{% endblock %}
+{% block content %}
+
+<style>
+.users-table{width:100%;border-collapse:collapse;background:var(--bg2);border:1px solid var(--border);
+             border-radius:var(--radius);overflow:hidden;margin-bottom:1.5rem}
+.users-table th{font-size:10px;font-weight:600;color:var(--text3);text-align:left;padding:10px 14px;
+                background:var(--bg3);border-bottom:1px solid var(--border);font-family:var(--mono);
+                text-transform:uppercase;letter-spacing:.06em}
+.users-table td{padding:10px 14px;border-bottom:1px solid var(--border);color:var(--text);
+                font-family:var(--mono);font-size:13px;vertical-align:middle}
+.users-table tr:last-child td{border-bottom:none}
+.role-pill{font-size:10px;padding:2px 8px;border-radius:99px;font-family:var(--mono);
+           text-transform:uppercase;letter-spacing:.05em}
+.role-admin   {background:rgba(255,64,96,0.12); color:#ff4060; border:1px solid rgba(255,64,96,0.3)}
+.role-operator{background:rgba(255,184,0,0.12); color:#ffb800; border:1px solid rgba(255,184,0,0.3)}
+.role-viewer  {background:rgba(0,200,255,0.10); color:#00c8ff; border:1px solid rgba(0,200,255,0.3)}
+.u-btn{font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;
+       background:var(--bg2);color:var(--text2);cursor:pointer;font-family:var(--mono);margin-right:4px}
+.u-btn.danger{color:#ff4060;border-color:rgba(255,64,96,0.4)}
+.u-btn:hover{border-color:var(--accent);color:var(--accent)}
+.form-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+           padding:18px;max-width:500px}
+.form-card h3{font-family:var(--display);font-size:14px;margin-bottom:14px}
+.form-card label{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;
+                 letter-spacing:.08em;margin-bottom:5px;font-family:var(--mono)}
+.form-card input, .form-card select{width:100%;background:var(--bg);border:1px solid var(--border);
+     border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin-bottom:12px}
+</style>
+
+<div id="users-list"></div>
+
+<div class="form-card">
+  <h3>Crea nuovo utente</h3>
+  <label>Nome utente (2-32 caratteri, alfanumerici + . _ -)</label>
+  <input type="text" id="new-name" placeholder="dr.rossi">
+  <label>Password (min. 12 caratteri)</label>
+  <input type="password" id="new-pass" placeholder="••••••••••••" minlength="12">
+  <label>Ruolo</label>
+  <select id="new-role">
+    <option value="viewer">viewer — sola lettura</option>
+    <option value="operator">operator — può gestire servizio e DLQ</option>
+    <option value="admin">admin — tutto</option>
+  </select>
+  <button class="btn btn-primary" onclick="createUser()">Crea</button>
+</div>
+
+<!-- ── 2FA enrollment modal ──────────────────────────────────────── -->
+<div id="totp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);
+     z-index:1000;align-items:center;justify-content:center;padding:20px;">
+  <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+              padding:24px;max-width:420px;width:100%;">
+    <h3 style="font-family:var(--display);font-size:16px;margin-bottom:12px;">
+      Enrolment 2FA — <span id="totp-user"></span>
+    </h3>
+    <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">
+      Scansiona il QR con Google Authenticator, Microsoft Authenticator, Aegis o app
+      TOTP equivalente. Inserisci il primo codice a 6 cifre per confermare.
+    </p>
+    <div id="totp-qr-container" style="text-align:center;margin-bottom:14px;">
+      <img id="totp-qr" src="" alt="QR TOTP" style="max-width:220px;">
+      <div id="totp-secret" style="font-family:var(--mono);font-size:11px;color:var(--text3);
+           margin-top:8px;word-break:break-all;"></div>
+    </div>
+    <label style="display:block;font-size:10px;color:var(--text3);text-transform:uppercase;
+                  letter-spacing:.08em;margin-bottom:5px;font-family:var(--mono);">
+      Codice a 6 cifre
+    </label>
+    <input id="totp-code" type="text" inputmode="numeric" pattern="[0-9]{6}"
+           maxlength="6" autocomplete="one-time-code"
+           style="width:100%;background:var(--bg);border:1px solid var(--border);
+                  border-radius:8px;padding:10px 12px;color:var(--text);
+                  font-family:var(--mono);letter-spacing:.3em;text-align:center;
+                  font-size:18px;margin-bottom:12px;">
+    <div style="display:flex;gap:8px;">
+      <button class="btn" onclick="closeTotp()" style="flex:1;">Annulla</button>
+      <button class="btn btn-primary" onclick="confirmTotp()" style="flex:1;">Conferma</button>
+    </div>
+  </div>
+</div>
+
+<script>
+let CURRENT_USER = '';
+
+async function loadUsers() {
+  try {
+    const r = await fetch('/api/users');
+    const d = await r.json();
+    CURRENT_USER = (d.current || {}).name || '';
+    const el = document.getElementById('users-list');
+    if (!(d.users || []).length) { el.innerHTML = '<div class="empty">Nessun utente.</div>'; return; }
+    // Fetch TOTP status per user in parallel — small N, worth it for correctness.
+    const totp = {};
+    await Promise.all((d.users || []).map(async u => {
+      try {
+        const s = await fetch('/api/users/' + encodeURIComponent(u.name) + '/totp/status');
+        const sj = await s.json();
+        totp[u.name] = !!sj.enabled;
+      } catch (_) { totp[u.name] = false; }
+    }));
+    let html = '<table class="users-table"><thead><tr><th>Nome</th><th>Ruolo</th>' +
+               '<th>2FA</th><th>Azioni</th></tr></thead><tbody>';
+    d.users.forEach(u => {
+      const isMe = u.name === CURRENT_USER;
+      const roleClass = 'role-' + u.role;
+      const otpOn = !!totp[u.name];
+      const otpPill = otpOn
+        ? '<span class="role-pill role-viewer" title="TOTP attivo">&#128274; ON</span>'
+        : '<span class="role-pill" style="border:1px solid var(--border);color:var(--text3)">off</span>';
+      const otpBtn = otpOn
+        ? '<button class="u-btn danger" onclick="disableTotp(\'' + u.name + '\')">Disabilita 2FA</button>'
+        : '<button class="u-btn" onclick="enrollTotp(\'' + u.name + '\')">Attiva 2FA</button>';
+      html += '<tr><td>' + u.name + (isMe ? ' <span style="color:#00e5a0">(tu)</span>' : '') + '</td>' +
+              '<td><span class="role-pill ' + roleClass + '">' + u.role + '</span></td>' +
+              '<td>' + otpPill + '</td>' +
+              '<td>' +
+                (isMe
+                  ? otpBtn
+                  :
+                  '<select class="u-btn" onchange="setRole(\'' + u.name + '\', this.value)">' +
+                    ['viewer','operator','admin'].map(r =>
+                      '<option value="' + r + '"' + (u.role === r ? ' selected' : '') + '>' + r + '</option>'
+                    ).join('') +
+                  '</select>' +
+                  '<button class="u-btn" onclick="resetPassword(\'' + u.name + '\')">Reset pw</button>' +
+                  otpBtn +
+                  '<button class="u-btn danger" onclick="delUser(\'' + u.name + '\')">Elimina</button>'
+                ) +
+              '</td></tr>';
+    });
+    html += '</tbody></table>';
+    el.innerHTML = html;
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+async function resetPassword(name) {
+  const pw = prompt('Nuova password per ' + name + ' (min. 12 caratteri):');
+  if (pw === null) return;
+  if (pw.length < 12) { toast('Password troppo corta (min 12)', 'error'); return; }
+  try {
+    const r = await fetch('/api/users/' + encodeURIComponent(name) + '/password', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({password: pw})
+    });
+    const d = await r.json();
+    if (d.ok) toast('Password aggiornata per ' + name, 'success');
+    else toast(d.error || 'errore', 'error');
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+let _totpActiveUser = null;
+async function enrollTotp(name) {
+  try {
+    const r = await fetch('/api/users/' + encodeURIComponent(name) + '/totp/enroll',
+                          {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await r.json();
+    if (!d.ok) { toast(d.error || 'errore', 'error'); return; }
+    _totpActiveUser = name;
+    document.getElementById('totp-user').textContent = name;
+    document.getElementById('totp-secret').textContent = 'secret: ' + d.secret;
+    const qrEl = document.getElementById('totp-qr');
+    if (d.qr) { qrEl.src = d.qr; qrEl.style.display = 'inline'; }
+    else { qrEl.style.display = 'none'; }
+    document.getElementById('totp-code').value = '';
+    document.getElementById('totp-modal').style.display = 'flex';
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+async function confirmTotp() {
+  const code = document.getElementById('totp-code').value.trim();
+  if (!/^\d{6}$/.test(code)) { toast('Codice a 6 cifre richiesto', 'error'); return; }
+  try {
+    const r = await fetch('/api/users/' + encodeURIComponent(_totpActiveUser) + '/totp/verify', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({code})
+    });
+    const d = await r.json();
+    if (d.ok) { toast('2FA attivata per ' + _totpActiveUser, 'success'); closeTotp(); loadUsers(); }
+    else toast(d.error || 'errore', 'error');
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+function closeTotp() {
+  document.getElementById('totp-modal').style.display = 'none';
+  _totpActiveUser = null;
+}
+
+async function disableTotp(name) {
+  if (!confirm('Disabilitare 2FA per ' + name + '?')) return;
+  try {
+    const r = await fetch('/api/users/' + encodeURIComponent(name) + '/totp/disable',
+                          {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    const d = await r.json();
+    if (d.ok) { toast('2FA disabilitata', 'success'); loadUsers(); }
+    else toast(d.error || 'errore', 'error');
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+async function createUser() {
+  const name = document.getElementById('new-name').value.trim();
+  const password = document.getElementById('new-pass').value;
+  const role = document.getElementById('new-role').value;
+  if (!name || password.length < 12) {
+    toast('Nome + password (>=12) richiesti', 'error'); return;
+  }
+  try {
+    const r = await fetch('/api/users', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({name, password, role})
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('Utente creato', 'success');
+      document.getElementById('new-name').value = '';
+      document.getElementById('new-pass').value = '';
+      loadUsers();
+    } else toast(d.error || 'errore', 'error');
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+async function delUser(name) {
+  if (!confirm('Elimina utente ' + name + '?')) return;
+  try {
+    const r = await fetch('/api/users/' + name, {method:'DELETE'});
+    const d = await r.json();
+    if (d.ok) { toast('Eliminato', 'success'); loadUsers(); }
+    else toast(d.error || 'errore', 'error');
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+async function setRole(name, role) {
+  try {
+    const r = await fetch('/api/users/' + name + '/role', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({role})
+    });
+    const d = await r.json();
+    if (d.ok) toast('Ruolo aggiornato', 'success');
+    else { toast(d.error || 'errore', 'error'); loadUsers(); }
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+loadUsers();
+</script>
+{% endblock %}

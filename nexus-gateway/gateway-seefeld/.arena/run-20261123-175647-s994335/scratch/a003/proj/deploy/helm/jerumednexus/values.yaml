@@ -1,0 +1,75 @@
+replicaCount: 2   # leader-elected: one active, one hot spare
+
+image:
+  repository: ghcr.io/jerumed-nexus/gateway
+  tag: "1.3.0"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities: {drop: [ALL]}
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+
+service:
+  type: ClusterIP
+  port: 8088
+
+ingress:
+  enabled: false
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: gateway.clinic.example
+      paths: [{path: /, pathType: Prefix}]
+  tls: []
+
+resources:
+  requests: {cpu: 100m, memory: 128Mi}
+  limits:   {cpu: 500m, memory: 512Mi}
+
+livenessProbe:
+  httpGet: {path: /livez, port: 8088}
+  initialDelaySeconds: 10
+  periodSeconds: 30
+
+readinessProbe:
+  httpGet: {path: /readyz, port: 8088}
+  initialDelaySeconds: 5
+  periodSeconds: 10
+
+persistence:
+  enabled: true
+  size: 8Gi
+  storageClass: ""
+
+config:
+  # inline or from ConfigMap
+  gatewayYamlContent: |
+    facility: "PRAXIS"
+    outputs: []
+
+secrets:
+  dlqKey: ""            # base64-encoded Fernet key
+  licenseKey: ""
+  gpgBackupKey: ""
+
+serviceMonitor:
+  enabled: true         # ships Prometheus scrape config
+  interval: 30s
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

@@ -1,0 +1,82 @@
+{
+  "annotations": {"list": []},
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "title": "JerumedNexus Gateway",
+  "tags": ["jerumednexus", "lab", "hl7"],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {"name": "instance", "type": "query", "datasource": "Prometheus",
+       "query": "label_values(gateway_up, instance)", "current": {}, "includeAll": true, "multi": true}
+    ]
+  },
+  "panels": [
+    {"id": 1, "type": "stat", "title": "Gateway up",
+     "targets": [{"expr": "gateway_up{instance=~\"$instance\"}", "refId": "A"}],
+     "gridPos": {"x": 0, "y": 0, "w": 4, "h": 4},
+     "options": {"colorMode": "background",
+                 "reduceOptions": {"calcs": ["last"]}},
+     "fieldConfig": {"defaults": {"mappings": [
+       {"type": "value", "options": {"0": {"text": "DOWN", "color": "red"},
+                                     "1": {"text": "UP", "color": "green"}}}
+     ]}}},
+
+    {"id": 2, "type": "timeseries", "title": "Messages / second (per device)",
+     "targets": [{"expr": "sum(rate(gateway_messages_total{instance=~\"$instance\"}[5m])) by (device)",
+                  "legendFormat": "{{device}}", "refId": "A"}],
+     "gridPos": {"x": 4, "y": 0, "w": 10, "h": 8}},
+
+    {"id": 3, "type": "timeseries", "title": "First-result latency (P50 / P95 / P99)",
+     "targets": [
+       {"expr": "histogram_quantile(0.50, rate(gateway_first_result_latency_seconds_bucket[5m]))", "legendFormat": "P50", "refId": "A"},
+       {"expr": "histogram_quantile(0.95, rate(gateway_first_result_latency_seconds_bucket[5m]))", "legendFormat": "P95", "refId": "B"},
+       {"expr": "histogram_quantile(0.99, rate(gateway_first_result_latency_seconds_bucket[5m]))", "legendFormat": "P99", "refId": "C"}
+     ],
+     "fieldConfig": {"defaults": {"unit": "s"}},
+     "gridPos": {"x": 14, "y": 0, "w": 10, "h": 8}},
+
+    {"id": 4, "type": "stat", "title": "DLQ backlog",
+     "targets": [{"expr": "gateway_dlq_backlog{instance=~\"$instance\"}", "refId": "A"}],
+     "gridPos": {"x": 0, "y": 4, "w": 4, "h": 4},
+     "fieldConfig": {"defaults": {"thresholds": {"mode": "absolute", "steps": [
+       {"color": "green", "value": null},
+       {"color": "yellow", "value": 50},
+       {"color": "red", "value": 500}
+     ]}}}},
+
+    {"id": 5, "type": "timeseries", "title": "Errors by code",
+     "targets": [{"expr": "sum(rate(gateway_errors_total[5m])) by (code)",
+                  "legendFormat": "{{code}}", "refId": "A"}],
+     "gridPos": {"x": 0, "y": 8, "w": 12, "h": 8}},
+
+    {"id": 6, "type": "timeseries", "title": "Circuit breaker state (targets)",
+     "targets": [{"expr": "gateway_breaker_state{instance=~\"$instance\"}",
+                  "legendFormat": "{{target}}", "refId": "A"}],
+     "gridPos": {"x": 12, "y": 8, "w": 12, "h": 8},
+     "fieldConfig": {"defaults": {"mappings": [
+       {"type": "value", "options": {"0": {"text": "CLOSED", "color": "green"},
+                                     "1": {"text": "HALF-OPEN", "color": "yellow"},
+                                     "2": {"text": "OPEN", "color": "red"}}}
+     ]}}},
+
+    {"id": 7, "type": "timeseries", "title": "Deduplication hit ratio",
+     "targets": [{"expr": "rate(gateway_dedup_hits_total[10m]) / clamp_min(rate(gateway_dedup_checks_total[10m]), 1)",
+                  "legendFormat": "hit rate", "refId": "A"}],
+     "fieldConfig": {"defaults": {"unit": "percentunit"}},
+     "gridPos": {"x": 0, "y": 16, "w": 12, "h": 6}},
+
+    {"id": 8, "type": "timeseries", "title": "Auth events (login / RBAC deny / TOTP fail)",
+     "targets": [
+       {"expr": "sum(rate(gateway_auth_login_total[5m])) by (result)", "legendFormat": "login-{{result}}", "refId": "A"},
+       {"expr": "sum(rate(gateway_auth_totp_fail_total[5m]))", "legendFormat": "totp-fail", "refId": "B"},
+       {"expr": "sum(rate(gateway_auth_rbac_denied_total[5m]))", "legendFormat": "rbac-denied", "refId": "C"}
+     ],
+     "gridPos": {"x": 12, "y": 16, "w": 12, "h": 6}}
+  ]
+}

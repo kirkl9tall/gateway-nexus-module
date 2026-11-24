@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang() }}">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}JerumedNexus{% endblock %}</title>
+  <style>
+    /* Fonts are served by the Pi: practices are often offline. */
+    @font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap;
+      src: url("/static/fonts/AtkinsonHyperlegible-Regular.woff2") format("woff2"); }
+    @font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap;
+      src: url("/static/fonts/AtkinsonHyperlegible-Bold.woff2") format("woff2"); }
+
+    /* ── Design tokens (docs/UI-DESIGN-ARENA.md). Old variable names are kept
+          so pages not redesigned yet still pick up the new look. ── */
+    :root {
+      color-scheme: light;   /* the UI is light only: see the note at dark_mode.js below */
+      --page:      #F3F6F7;
+      --surface:   #FFFFFF;
+      --ink:       #17202A;
+      --ink-2:     #4B5763;
+      --ink-3:     #5F6B77;
+      --line:      #D5DCE1;
+      --brand:     #2C5F8A;
+      --brand-2:   #234C6F;
+      --brand-tint:#E6EEF5;
+      --good:      #1E7A46;  --good-tint: #E3F2E9;
+      --warn:      #8A5A00;  --warn-fill: #E9A820; --warn-tint: #FBF1DA;
+      --crit:      #B42318;  --crit-tint: #FBE6E3;
+      --neutral:   #5F6B77;  --neutral-tint: #ECEFF2;
+      --radius:    10px;
+
+      /* legacy names → new tokens */
+      --bg: var(--page); --bg2: var(--surface); --bg3: #EEF2F4; --card: var(--surface);
+      --border: var(--line); --accent: var(--brand); --accent2: var(--brand-2);
+      --accent-ink: var(--brand); --accent-tint: var(--brand-tint);
+      --green: var(--good); --red: var(--crit); --yellow: var(--warn);
+      --text: var(--ink); --text2: var(--ink-2); --text3: var(--ink-3);
+      --mono:    ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      --sans:    "Atkinson Hyperlegible", system-ui, sans-serif;
+      --display: "Atkinson Hyperlegible", system-ui, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 18px; -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--page); color: var(--ink); font-family: var(--sans);
+      font-weight: 400; line-height: 1.5; min-height: 100vh;
+      font-variant-numeric: tabular-nums;
+    }
+    a { color: var(--brand); }
+    a:hover { color: var(--brand-2); }
+    :focus { outline: none; }
+    :focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+    ::selection { background: var(--brand-tint); }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+    /* ── Header ──────────────────────────────────────────────────────────
+       One rule makes overlap impossible: the header is a WRAPPING flex row
+       with no fixed height. When brand + gateway pill + tools do not fit on
+       one line (phone, tablet, zoom 150 %, long names), the next item moves
+       to a new line instead of sliding under its neighbour. Nothing is
+       absolutely positioned and the header is not sticky, so its height can
+       change freely. */
+    .topbar {
+      background: var(--surface); border-bottom: 1px solid var(--line);
+      display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+      padding: 12px 24px; min-height: 72px;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem;
+      color: var(--ink); text-decoration: none; white-space: nowrap; min-height: 44px; }
+    .brand img { height: 30px; width: auto; flex: none; }
+    .brand span { color: var(--ink-3); font-weight: 400; }
+    .hdr-pill { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 6px 16px 6px 10px;
+      border-radius: 999px; font-weight: 700; font-size: 1rem; white-space: nowrap; text-decoration: none;
+      background: var(--neutral-tint); color: var(--neutral); }
+    .hdr-pill svg { width: 24px; height: 24px; flex: none; }
+    .hdr-pill .i { display: none; }
+    .hdr-pill.wait .i-wait, .hdr-pill.on .i-on, .hdr-pill.off .i-off { display: inline-flex; }
+    .hdr-pill.on  { background: var(--good-tint); color: var(--good); }
+    .hdr-pill.off { background: var(--crit-tint); color: var(--crit); }
+    a.hdr-pill { background: var(--warn-tint); color: var(--warn); }
+    a.hdr-pill[hidden] { display: none; }
+    .hdr-tools { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+    .hdr-user { color: var(--ink-2); max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .topbar .lang-picker { min-height: 44px; border-radius: 8px; background: var(--surface); }
+    .topbar .lang-picker select { min-height: 42px; font-size: 1rem; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+    .dot.green { background: var(--good); } .dot.red { background: var(--crit); } .dot.grey { background: var(--neutral); }
+    .btn-icon {
+      width: 44px; height: 44px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--surface); color: var(--ink-2); cursor: pointer; flex: none;
+      display: flex; align-items: center; justify-content: center; text-decoration: none;
+    }
+    .btn-icon:hover { border-color: var(--brand); color: var(--brand); }
+
+    /* ── Menu ────────────────────────────────────────────────────────────
+       Phone and tablet (< 1024 px): the four doctor entries are big buttons
+       under the header, ALL visible at once (2 x 2 on phones, 4 in a row on
+       tablets). No hamburger to discover, no sideways scrolling.
+       Desktop (>= 1024 px): the same links become a left sidebar that stays
+       in view while the page scrolls. Same markup, CSS only, no JavaScript. */
+    .shell { display: block; }
+    .sidebar { background: var(--surface); border-bottom: 1px solid var(--line); }
+    .sidebar nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 10px 16px; }
+    .nav-link {
+      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+      min-height: 72px; padding: 8px 6px; border-radius: var(--radius); border: 2px solid transparent;
+      color: var(--ink); text-decoration: none; font-size: 1rem; line-height: 1.2; text-align: center;
+      overflow-wrap: break-word; hyphens: auto; min-width: 0; position: relative;
+    }
+    .nav-link:hover { background: var(--page); color: var(--ink); }
+    .nav-link.active { background: var(--brand-tint); color: var(--brand-2); font-weight: 700; border-color: var(--brand); }
+    .nav-link svg { flex-shrink: 0; width: 26px; height: 26px; }
+    .nav-badge { font-size: 0.8rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; color: #fff; display: none; }
+    .nav-link .nav-badge { position: absolute; top: 6px; right: 6px; }
+    .tech-nav { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; padding-top: 6px; border-top: 1px solid var(--line); }
+    .nav-section { flex-basis: 100%; font-size: 0.9rem; color: var(--ink-3); }
+    .tech-nav .nav-link { flex-direction: row; min-height: 44px; padding: 6px 12px; font-size: 0.95rem; color: var(--ink-2);
+      border: 1px solid var(--line); gap: 8px; }
+    .tech-nav .nav-link.active { border-color: var(--brand); color: var(--brand-2); }
+    .tech-nav .nav-link svg { width: 18px; height: 18px; }
+    .tech-nav .nav-link .nav-badge { position: static; }
+    .sidebar-footer { display: none; }
+    .device-info { font-size: 0.85rem; color: var(--ink-3); line-height: 1.6; overflow-wrap: anywhere; }
+    body[data-view="studio"] .tech-only { display: none !important; }
+    body[data-view="tech"]   .studio-only { display: none !important; }
+
+    @media (min-width: 600px) {
+      .sidebar nav { grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 10px 24px; }
+    }
+    @media (min-width: 1024px) {
+      .shell { display: grid; grid-template-columns: 248px minmax(0, 1fr); align-items: start; }
+      .sidebar { position: sticky; top: 0; height: 100vh; overflow-y: auto; display: flex; flex-direction: column;
+        border-bottom: 0; border-right: 1px solid var(--line); }
+      .sidebar nav { display: flex; flex-direction: column; gap: 4px; padding: 16px 12px; flex: 1; }
+      .nav-link { flex-direction: row; justify-content: flex-start; gap: 14px; min-height: 56px; padding: 10px 14px;
+        font-size: 1.1rem; text-align: left; border-width: 0 0 0 4px; border-radius: 0 var(--radius) var(--radius) 0; }
+      .nav-link .nav-badge { position: static; margin-left: auto; }
+      .tech-nav { display: block; border-top: 0; padding-top: 0; }
+      .nav-section { padding: 20px 14px 6px; }
+      .tech-nav .nav-link { min-height: 44px; font-size: 0.95rem; border: 0; border-left: 4px solid transparent; }
+      .tech-nav .nav-link.active { border-left-color: var(--brand); }
+      .sidebar-footer { display: block; padding: 14px 24px; border-top: 1px solid var(--line); }
+    }
+    @media (max-width: 599px) {
+      .topbar { padding: 8px 16px; gap: 8px 12px; }
+      .brand span, .hdr-user, .topbar .lang-picker svg { display: none; }
+    }
+
+    /* ── Main ── */
+    .main { min-width: 0; }
+    .content { padding: 28px 40px 64px; max-width: 1280px; width: 100%; }
+    @media (max-width: 1023px) { .content { padding: 20px 24px 48px; } }
+    @media (max-width: 599px)  { .content { padding: 16px 16px 40px; } }
+    .page-kicker { font-size: 0.9rem; color: var(--ink-3); }
+    .page-h1 { font-weight: 700; font-size: 2rem; line-height: 1.15; margin: 2px 0 18px; overflow-wrap: break-word; }
+    .page-desc { color: var(--ink-2); max-width: 68ch; margin-top: -8px; margin-bottom: 20px; }
+    img, svg, video, canvas { max-width: 100%; }
+
+    /* ── Cards ── */
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 22px 24px; margin-bottom: 24px; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .card-title { font-size: 1.15rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+    .card-title svg { color: var(--brand); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+    .grid-2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; }
+    @media (max-width: 900px) { .grid-4 { grid-template-columns: repeat(2, minmax(0,1fr)); } .grid-2 { grid-template-columns: 1fr; } }
+    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+    .stat-label { font-size: 0.85rem; color: var(--ink-3); margin-bottom: 6px; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--ink); line-height: 1.1; }
+    .stat-value.red { color: var(--crit); }
+    .stat-sub { font-size: 0.85rem; color: var(--ink-3); margin-top: 4px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 48px; padding: 10px 20px; font: inherit; font-size: 1rem; font-weight: 700;
+      border-radius: var(--radius); border: 2px solid var(--line); cursor: pointer;
+      text-decoration: none; white-space: nowrap; background: var(--surface); color: var(--ink);
+    }
+    .btn:hover { border-color: var(--brand); color: var(--brand); }
+    .btn-primary, .btn-success { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn-primary:hover, .btn-success:hover { background: var(--brand-2); border-color: var(--brand-2); color: #fff; }
+    .btn-danger { border-color: var(--crit); color: var(--crit); }
+    .btn-danger:hover { background: var(--crit-tint); color: var(--crit); }
+    .btn-ghost { background: transparent; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 0.9rem; color: var(--ink-2); margin-bottom: 6px; }
+    .form-control, .form-input {
+      width: 100%; background: var(--surface); border: 2px solid var(--line); border-radius: 8px;
+      color: var(--ink); padding: 8px 12px; min-height: 44px; font: inherit; font-size: 1rem;
+    }
+    .form-control:focus, .form-input:focus { border-color: var(--brand); }
+    .form-control.mono { font-family: var(--mono); font-size: 0.9rem; }
+
+    /* ── Legacy blocks used by technician pages ── */
+    .target-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+    .target-row.disabled { opacity: 0.55; }
+    .target-name { font-weight: 700; flex: 1; }
+    .target-type { font-size: 0.8rem; color: var(--ink-2); background: var(--page); padding: 2px 8px; border-radius: 6px; }
+    .target-status { font-size: 0.9rem; white-space: nowrap; }
+    .target-status.ok { color: var(--good); } .target-status.err { color: var(--crit); } .target-status.off { color: var(--ink-3); }
+    .service-badge { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 4px 12px;
+      border: 1px solid var(--line); border-radius: 999px; }
+    .log-viewer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 12px 16px; font-family: var(--mono); font-size: 0.8rem; line-height: 1.75; max-height: 520px; overflow-y: auto; }
+    .log-line { border-bottom: 1px solid var(--page); }
+    .log-line.error { color: var(--crit); background: var(--crit-tint); }
+    .log-line.warn { color: var(--warn); } .log-line.ok { color: var(--good); }
+    .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: var(--line); border-radius: 999px; cursor: pointer; transition: 0.15s; }
+    .toggle-slider:before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.15s; }
+    input:checked + .toggle-slider { background: var(--brand); }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .alert { padding: 14px 18px; border-radius: var(--radius); font-size: 1rem; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 12px; background: var(--brand-tint); color: var(--ink); }
+    .alert-success { background: var(--good-tint); }
+    .alert-error { background: var(--crit-tint); color: var(--crit); }
+    .alert-info { background: var(--brand-tint); }
+    .alert-warn { background: var(--warn-tint); }
+    .license-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; padding: 2px 10px; border-radius: 999px; }
+    .license-badge.active { background: var(--good-tint); color: var(--good); }
+    .license-badge.inactive { background: var(--crit-tint); color: var(--crit); }
+    #yaml-editor { width: 100%; min-height: 440px; background: var(--surface); border: 2px solid var(--line);
+      border-radius: var(--radius); color: var(--ink); padding: 16px; font-family: var(--mono); font-size: 0.85rem; line-height: 1.7; }
+    .conn-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+    .conn-card { border: 2px solid var(--line); border-radius: var(--radius); padding: 16px; cursor: pointer; text-align: left; background: var(--surface); font: inherit; }
+    .conn-card.selected { border-color: var(--brand); background: var(--brand-tint); }
+    .conn-card .icon { display: none; }
+    .conn-card .label { font-size: 1.05rem; font-weight: 700; }
+    .conn-card .desc { font-size: 0.85rem; color: var(--ink-3); margin-top: 3px; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); max-width: min(560px, 92vw);
+      padding: 14px 20px; border-radius: var(--radius); font-size: 1rem; font-weight: 700; z-index: 9999; display: none;
+      box-shadow: 0 10px 30px rgba(23,32,42,0.25); }
+
+    /* ── Status chip: colour + icon shape + word, never colour alone ── */
+    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 10px;
+      border-radius: 999px; font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+    .chip svg { width: 20px; height: 20px; flex: none; }
+    .chip.good { background: var(--good-tint); color: var(--good); }
+    .chip.warning { background: var(--warn-tint); color: var(--warn); }
+    .chip.critical { background: var(--crit-tint); color: var(--crit); }
+    .chip.neutral { background: var(--neutral-tint); color: var(--neutral); }
+
+    /* ── Technician zone: always at the bottom, closed by default ── */
+    .tech-zone { margin-top: 48px; border-top: 2px dashed var(--line); padding-top: 20px; }
+    .tech-zone > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px;
+      color: var(--ink-2); font-weight: 700; min-height: 48px; }
+    .tech-zone > summary::-webkit-details-marker { display: none; }
+    .tech-zone > summary::before { content: "▸"; font-size: 1.1rem; }
+    .tech-zone[open] > summary::before { content: "▾"; }
+    .tech-zone > summary small { font-weight: 400; color: var(--ink-3); }
+    .tech-zone-body { margin-top: 20px; }
+
+  </style>
+  <meta name="csrf-token" content="{{ csrf_token() }}">
+  {% include "_i18n_head.html" %}
+  <link rel="stylesheet" href="/static/ui.css?v=2">
+  {% block head %}{% endblock %}
+</head>
+<body data-view="{{ 'tech' if current_role == 'admin' else 'studio' }}" data-role="{{ current_role }}">
+
+
+{% from "_ui.html" import status_icon %}
+<header class="topbar">
+  <a href="/" class="brand"><img src="/static/logo.png" alt="">JerumedNexus <span>Gateway</span></a>
+  {# Gateway on/off: icon shape + word, refreshed by pollStatus() below #}
+  <span id="svc-badge" class="hdr-pill wait" role="status">
+    <span class="i i-wait">{{ status_icon('neutral') }}</span><span class="i i-on">{{ status_icon('good') }}</span><span class="i i-off">{{ status_icon('critical') }}</span>
+    <span id="svc-text">{{ t("Verifico…") }}</span>
+  </span>
+  <a href="/dlq" id="hdr-dlq" class="hdr-pill tech-only" hidden>{{ status_icon('warning') }}<span id="hdr-dlq-text"></span></a>
+  <div class="hdr-tools">
+    {% include "_lang_select.html" %}
+    <span class="hdr-user">{{ current_user or '' }}</span>
+    <a href="/logout" class="btn-icon" title="{{ t('Esci') }}" aria-label="{{ t('Esci') }}" onclick="return confirm(T('Uscire dalla sessione?'))">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </a>
+  </div>
+</header>
+
+<div class="shell">
+<aside class="sidebar">
+  <nav aria-label="{{ t('Menu') }}">
+    {# For everybody: the four questions a practice actually has. #}
+    <a href="/" class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      {{ t("Panoramica") }}
+    </a>
+    <a href="/analyzers" class="nav-link {% if request.endpoint == 'analyzers' %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v6.5L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/><path d="M7 15h10"/></svg>
+      {{ t("Apparecchi") }}
+      <span id="pending-devices-badge" class="nav-badge" style="background:var(--brand);"></span>
+    </a>
+    <a href="/verifica" class="nav-link {% if request.endpoint and request.endpoint.startswith('verifica.') %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      {{ t("Verifica impianto") }}
+    </a>
+    <a href="/results" class="nav-link {% if request.endpoint == 'results_page' %}active{% endif %}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+      {{ t("Risultati") }}
+    </a>
+
+    {# Technician only: hidden for doctors (data-view="studio"). #}
+    <div class="tech-only tech-nav">
+      <div class="nav-section">{{ t("Per il tecnico") }}</div>
+      <a href="/dlq" class="nav-link {% if request.endpoint == 'dlq_page' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        {{ t("Da rispedire") }}
+        <span id="dlq-badge" class="nav-badge" style="background:var(--warn);"></span>
+      </a>
+      <a href="/logs" class="nav-link {% if request.endpoint in ('logs_page', 'trace_page') %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        {{ t("Log e trace") }}
+      </a>
+      <a href="/inspect" class="nav-link {% if request.endpoint and request.endpoint.startswith('inspect.') %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Frame Inspector
+      </a>
+      <a href="/config" class="nav-link {% if request.endpoint == 'config_page' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        {{ t("Configurazione") }}
+      </a>
+      <a href="/users" class="nav-link {% if request.endpoint == 'users_page' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        {{ t("Utenti") }}
+      </a>
+      <a href="/license" class="nav-link {% if request.endpoint == 'license_page' %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        {{ t("Licenza") }}
+      </a>
+      <a href="/topology" class="nav-link {% if request.endpoint and request.endpoint.startswith('topology.') %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.5 8.5l7 7"/></svg>
+        {{ t("Topologia") }}
+      </a>
+      <a href="/replay" class="nav-link {% if request.endpoint and request.endpoint.startswith('wire_replay.') %}active{% endif %}">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Wire Replay
+      </a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="device-info">
+      <div>{{ hostname or '' }}</div>
+      <div>v{{ gateway_version }}{% if serial %} · S/N {{ serial[:16] }}{% endif %}</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="content">
+    {% block page_header %}<h1 class="page-h1">{% block page_title %}{% endblock %}</h1>{% endblock %}
+    {% if demo_mode %}
+    <div class="alert" style="border-left-color:var(--yellow);background:rgba(154,100,16,0.08);font-weight:500;">
+      {{ t("DEMO MODE — dati simulati, non usare in produzione") }}
+    </div>
+    {% endif %}
+    {% if warn_placeholder %}
+    <div class="alert alert-error">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span><strong>{{ t("Configurazione incompleta:") }}</strong>
+      {{ t("Il nome dello studio non è ancora stato inserito.") }}
+      <a href="/config">{{ t("Inseriscilo in Configurazione") }}</a> {{ t("prima di usare il gateway.") }}</span>
+    </div>
+    {% endif %}
+    {% block content %}{% endblock %}
+  </div>
+</div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<script>
+// ── CSRF: auto-inject X-CSRF-Token on non-GET /api/ fetches ────────
+(function() {
+  const _tokEl = document.querySelector('meta[name="csrf-token"]');
+  const CSRF_TOKEN = _tokEl ? _tokEl.getAttribute('content') : '';
+  window.CSRF_TOKEN = CSRF_TOKEN;
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(input, init) {
+    init = init || {};
+    const raw = (typeof input === 'string') ? input : (input && input.url) || '';
+    const method = (init.method || (input && input.method) || 'GET').toUpperCase();
+    // Resolve the URL so this works for relative ("/api/x"), absolute
+    // ("http://host/api/x") and reverse-proxy subpath ("/gateway/api/x")
+    // forms alike — the old `indexOf('/api/') === 0` check silently dropped
+    // the token for anything that wasn't a bare relative path, which the
+    // server then rejected as "CSRF token invalido".
+    let path = raw, sameOrigin = true;
+    try {
+      const u = new URL(raw, window.location.origin);
+      path = u.pathname;
+      sameOrigin = (u.origin === window.location.origin);
+    } catch (e) { /* keep raw string on parse failure */ }
+    if (CSRF_TOKEN && method !== 'GET' && sameOrigin && path.indexOf('/api/') !== -1) {
+      init.headers = Object.assign({}, init.headers || {}, {'X-CSRF-Token': CSRF_TOKEN});
+    }
+    return _origFetch(input, init);
+  };
+})();
+
+// ── Service status polling ─────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const dot  = document.getElementById('svc-dot');
+    const text = document.getElementById('svc-text');
+    const svc  = d.service_systemd || 'unknown';
+    // systemd answer, or (no systemd, e.g. a dev PC) the freshness of status.json
+    var on = svc === 'active' || (svc !== 'inactive' && svc !== 'failed' && d.running &&
+             d.updated_at && (Date.now() - new Date(d.updated_at).getTime()) < 660000);
+    var badge = document.getElementById('svc-badge');
+    badge.className = on ? 'on' : 'off';
+    dot.className  = 'dot ' + (on ? 'green' : 'red');
+    text.textContent = on ? T('Gateway acceso') : T('Gateway spento');
+    if (window._onStatusUpdate) window._onStatusUpdate(d);
+  } catch(e) {}
+}
+pollStatus();
+setInterval(pollStatus, 5000);
+
+// ── Pending devices badge polling ──────────────────────────────────
+async function pollPendingDevices() {
+  try {
+    const r = await fetch('/api/devices/discovered');
+    const d = await r.json();
+    const el = document.getElementById('pending-devices-badge');
+    if (!el) return;
+    const n = (d.pending || []).length;
+    if (n > 0) {
+      el.textContent = n;
+      el.style.display = 'inline-block';
+      el.title = T('{n} nuovi apparecchi trovati — apri Analizzatori per attivarli', {n: n});
+    } else {
+      el.style.display = 'none';
+    }
+  } catch(e) {}
+}
+pollPendingDevices();
+setInterval(pollPendingDevices, 15000);
+
+// ── PWA + command palette ─────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/service_worker.js').catch(() => {});
+}
+(function() {
+  const s = document.createElement('script');
+  s.src = '/static/command_palette.js';
+  s.defer = true;
+  document.head.appendChild(s);
+  const dm = document.createElement('script');
+  dm.src = '/static/dark_mode.js';
+  dm.defer = true;
+  document.head.appendChild(dm);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = '/static/manifest.webmanifest';
+  document.head.appendChild(link);
+})();
+
+// ── DLQ badge polling ──────────────────────────────────────────────
+async function pollDlq() {
+  try {
+    const r = await fetch('/api/dlq?limit=1');
+    if (r.status === 403) return;   // viewer can't see DLQ
+    const d = await r.json();
+    const el = document.getElementById('dlq-badge');
+    if (!el) return;
+    const n = (d.entries || []).length > 0
+      ? await fetch('/api/dlq?limit=200').then(x => x.json()).then(x => (x.entries||[]).length)
+      : 0;
+    const hd = document.getElementById('hdr-dlq');
+    if (hd) {
+      hd.style.display = n > 0 ? '' : 'none';
+      document.getElementById('hdr-dlq-text').textContent = T('{n} risultati in attesa', {n: n});
+    }
+    if (n > 0) {
+      el.textContent = n; el.style.display = 'inline-block';
+      el.title = T('{n} messaggi da rispedire', {n: n});
+    } else {
+      el.style.display = 'none';
+    }
+    if (window._onDlqCount) window._onDlqCount(n);
+  } catch(e) {}
+}
+pollDlq();
+setInterval(pollDlq, 30000);
+
+
+// ── Toast ──────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  const styles = getComputedStyle(document.documentElement);
+  const bg = type === 'error' ? styles.getPropertyValue('--red') : styles.getPropertyValue('--text');
+  el.style.background = bg.trim() || '#1d1f20';
+  el.style.border = '0';
+  el.style.color = styles.getPropertyValue('--bg').trim() || '#f2f2f3';
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none', 3800);
+}
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

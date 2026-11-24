@@ -1,0 +1,79 @@
+{% extends "wizard/base.html" %}
+{% block form %}
+<h2><span class="step-icon">5</span>Primo Gestionale (LIS/HIS)</h2>
+<p class="intro">Il gateway invia i risultati al software del medico — dimmi qual è.</p>
+
+<form method="post">
+  <label>Tipo di gestionale</label>
+  <select name="target_kind" required>
+    <option value="mllp_hl7">Tomedo / Vitomed / curaMED / Aeskulap (HL7 MLLP)</option>
+    <option value="fhir_rest">Sistema FHIR R4 (REST)</option>
+    <option value="sftp">Cartella SFTP / file drop</option>
+  </select>
+
+  <label>Nome del gestionale <small>(per visualizzazione)</small></label>
+  <input type="text" name="target_name"
+         placeholder="es. Tomedo produzione"
+         value="{{ data.target_name or 'LIS' }}">
+
+  <label>Indirizzo IP</label>
+  <input type="text" name="target_host" required
+         placeholder="{{ data.lis_hint or 'es. 192.168.1.50' }}"
+         value="{{ data.target_host or data.lis_hint or '' }}">
+
+  <label>Porta</label>
+  <input type="number" name="target_port" value="{{ data.target_port or 2575 }}" min="1" max="65535">
+  <p class="hint">Default HL7 MLLP: 2575. FHIR REST: 8080. SFTP: 22.</p>
+
+  <button type="button" class="btn btn-test"
+          onclick="testTcp(document.querySelector('input[name=target_host]').value, parseInt(document.querySelector('input[name=target_port]').value), 'target-test')">
+    Verifica connessione al gestionale
+  </button>
+  <div id="target-test" class="test-result"></div>
+
+  <div class="actions">
+    <a href="{{ url_for('wizard.step_4') }}" class="btn btn-secondary">← Indietro</a>
+    <button type="submit" class="btn btn-primary">Avanti →</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block help %}
+<h3>💊 Cosa fa questo passo</h3>
+<p>Configuro il "destinatario" dei risultati. Il gateway prende ogni risultato
+degli analizzatori, lo trasforma in HL7 v2.5 (o FHIR R4) e lo invia qui.</p>
+
+<h3>🔍 Come trovo l'indirizzo del gestionale</h3>
+<p>Chiedi al tecnico che ha installato il gestionale. Se non c'è, prova così:</p>
+<ol>
+  <li>Vai sul PC dove è installato Tomedo/Vitomed</li>
+  <li>Cerca nelle impostazioni "HL7", "Interfaccia laboratorio", "LIS receiver"</li>
+  <li>Ti darà una porta (di solito 2575 o 2100)</li>
+  <li>L'IP è quello del PC stesso — <kbd>Win+R</kbd> → <code>cmd</code> → <code>ipconfig</code></li>
+</ol>
+
+<h3>🩺 Gestionali supportati</h3>
+<ul>
+  <li><b>Tomedo</b> (zollsoft) → HL7 MLLP, porta configurabile</li>
+  <li><b>Vitomed</b> → HL7 MLLP</li>
+  <li><b>curaMED</b> (CGM) → HL7 MLLP</li>
+  <li><b>Aeskulap</b> → HL7 MLLP</li>
+  <li><b>WinMed</b> → HL7 MLLP</li>
+  <li><b>Elaphe</b>, <b>Praxima</b>, altri → HL7 MLLP</li>
+</ul>
+
+<div class="callout">
+  <b>Nel gestionale del medico:</b> serve una piccola configurazione per
+  <b>abilitare la ricezione HL7</b>. Chiedi al fornitore del gestionale
+  di attivare l'interfaccia HL7 v2.5. Di solito è gratis o compreso nella
+  licenza — a volte è a pagamento (chiedere prima).
+</div>
+
+<h3>💰 Costo tipico</h3>
+<p>Attivare interfaccia HL7 nel gestionale:</p>
+<ul>
+  <li>Tomedo: incluso</li>
+  <li>Vitomed: incluso o piccolo supplemento</li>
+  <li>curaMED: modulo LabInterface — a pagamento (~500-1500 CHF una tantum)</li>
+</ul>
+{% endblock %}

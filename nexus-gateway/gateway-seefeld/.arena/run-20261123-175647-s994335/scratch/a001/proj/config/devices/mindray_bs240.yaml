@@ -1,0 +1,12 @@
+id: mindray_bs240
+type: sysmex_astm
+enabled: false
+display_name: "Mindray BS-240 (Chemistry)"
+vendor: Mindray
+model: BS-240
+serial_port: "/dev/ttyUSB4"
+baudrate: 9600
+notes: |
+  Chimica clinica benchtop, alternativa low-cost al Cobas c111.
+  Protocollo: HL7/ASTM E1394 via RS-232 (nostro adapter sysmex_astm).
+  [SPECULATIVE] Confermare framing su hardware reale prima del deploy.

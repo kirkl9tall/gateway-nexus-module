@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block title %}Impostazioni — JerumedNexus{% endblock %}
+{% block page_title %}Impostazioni{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Cambia Password WebUI
+    </div>
+  </div>
+  {% if msg %}
+  <div class="alert alert-success" style="margin-bottom:16px;">✓ {{ msg }}</div>
+  {% endif %}
+  {% if error %}
+  <div class="alert alert-error" style="margin-bottom:16px;">{{ error }}</div>
+  {% endif %}
+  <form method="POST" style="max-width:400px;">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label">Password attuale</label>
+      <input class="form-control" type="password" name="old_password" required
+             autocomplete="current-password">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nuova password (min. {{ min_len }} caratteri)</label>
+      <input class="form-control" type="password" name="new_password" required
+             minlength="{{ min_len }}" autocomplete="new-password">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Conferma nuova password</label>
+      <input class="form-control" type="password" name="confirm_password" required
+             minlength="{{ min_len }}" autocomplete="new-password">
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top:8px;">
+      Aggiorna password
+    </button>
+  </form>
+</div>
+{% endblock %}

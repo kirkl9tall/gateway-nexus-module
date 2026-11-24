@@ -1,0 +1,7 @@
+[Unit]
+Description=Notify JerumedNexus Gateway of new USB device %i
+After=jerumednexus-webui.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/curl -s --max-time 5 -X POST -d "dev=%i" http://127.0.0.1:8080/api/devices/notify_added

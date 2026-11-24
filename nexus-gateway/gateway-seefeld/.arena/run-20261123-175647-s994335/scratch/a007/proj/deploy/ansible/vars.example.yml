@@ -1,0 +1,22 @@
+# ============================================================
+#  Per-site variables -- JerumedNexus Gateway
+#
+#  Encrypt this file with ansible-vault before committing:
+#     ansible-vault encrypt vars.yml
+# ============================================================
+
+facility_name: "Praxis Zurich"
+
+# Set to a 12+ character password. First login uses this; admin
+# can change it later from the Web UI.
+admin_password: "REPLACE-WITH-STRONG-PASSWORD-12+"
+
+# 32+ character random token — the LOC-200 will send it as
+#   Authorization: Bearer <this-value>
+# Generate one with:
+#   head -c 32 /dev/urandom | base64 | tr -d '/+=' | cut -c1-32
+http_token: "REPLACE-WITH-RANDOM-TOKEN-32CHARS"
+
+# Optional overrides
+# webui_port: 8080
+# http_port: 5003

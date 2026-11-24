@@ -1,0 +1,70 @@
+# /etc/prometheus/rules/jerumednexus.yml
+#
+# Prometheus alerting rules for JerumedNexus Gateway.
+# Scrape /metrics on the Web UI port (default: 8080) at least every 30s.
+
+groups:
+  - name: jerumednexus.availability
+    rules:
+      - alert: JerumedNexusServiceDown
+        expr: jerumednexus_up == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "JerumedNexus gateway service is DOWN on {{ $labels.instance }}"
+          description: "systemd reports the gateway inactive for 2 minutes. Check `systemctl status jerumednexus-gateway` and `journalctl -u jerumednexus-gateway -n 200`."
+
+      - alert: JerumedNexusInternalLoopStuck
+        expr: jerumednexus_up == 1 and jerumednexus_running == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "systemd shows the process alive but internal loop is stopped"
+
+  - name: jerumednexus.data
+    rules:
+      - alert: JerumedNexusDeviceSilentTooLong
+        expr: (time() - jerumednexus_device_last_seen_seconds) > 3600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Device {{ $labels.device }} silent > 1h"
+          description: "No frames received. Check the analyzer connection, cable, or power."
+
+      - alert: JerumedNexusHighErrorRate
+        expr: rate(jerumednexus_errors_today[15m]) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Dispatch error rate spiking (> 0.5/s over 15m)"
+
+      - alert: JerumedNexusQueueFull
+        expr: increase(jerumednexus_queue_full_events[5m]) > 0
+        labels:
+          severity: warning
+        annotations:
+          summary: "Queue was full at least once in the last 5 minutes"
+          description: "Messages may be dropping into the DLQ. Check downstream PIS responsiveness."
+
+      - alert: JerumedNexusQueueBacklog
+        expr: jerumednexus_queue_size / jerumednexus_queue_maxsize > 0.7
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Queue depth > 70% of capacity for 5 minutes"
+
+  - name: jerumednexus.circuit
+    rules:
+      - alert: JerumedNexusTargetBreakerOpen
+        expr: jerumednexus_target_breaker_state == 2
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Circuit breaker OPEN for target {{ $labels.name }}"
+          description: "The target has been unavailable long enough to trip the breaker. Check network + PIS status."

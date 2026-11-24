@@ -1,0 +1,10 @@
+id: menarini_ha8180t
+type: mllp_hl7
+enabled: false
+display_name: "Menarini HA-8180T (HbA1c)"
+vendor: Menarini (A. Menarini Diagnostics)
+model: HA-8180T
+listen_host: "0.0.0.0"
+listen_port: 5082
+notes: |
+  HPLC HbA1c ad alta produttività. Comune nei laboratori italiani/svizzeri.

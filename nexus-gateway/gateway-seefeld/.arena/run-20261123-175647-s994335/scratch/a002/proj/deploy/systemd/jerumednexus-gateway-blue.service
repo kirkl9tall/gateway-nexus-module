@@ -1,0 +1,33 @@
+[Unit]
+Description=JerumedNexus Gateway (blue slot)
+Documentation=https://docs.jerumednexus.example
+Requires=jerumednexus-gateway.socket
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=jerumednexus
+Group=jerumednexus
+WorkingDirectory=/opt/jerumednexus
+Environment="SLOT=blue" "LOG_FORMAT=json"
+ExecStart=/opt/jerumednexus/.venv/bin/python -m src.main --config=/opt/jerumednexus/config/gateway.yaml
+Restart=on-failure
+RestartSec=2
+TimeoutStopSec=15
+KillSignal=SIGTERM
+
+# Hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/opt/jerumednexus/logs /opt/jerumednexus/config
+CapabilityBoundingSet=
+AmbientCapabilities=
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+[Install]
+WantedBy=multi-user.target

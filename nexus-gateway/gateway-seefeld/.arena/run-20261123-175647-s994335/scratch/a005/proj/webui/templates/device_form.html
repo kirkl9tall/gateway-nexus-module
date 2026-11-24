@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Modifica' if editing else 'Nuovo' }} device — JerumedNexus{% endblock %}
+{% block page_title %}{{ 'Modifica device: ' + device.id if editing else 'Aggiungi nuovo device' }}{% endblock %}
+{% block content %}
+
+<style>
+.conn-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.conn-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+          padding:22px 18px;text-align:center;cursor:pointer;transition:all .15s}
+.conn-card:hover{border-color:var(--accent2)}
+.conn-card.selected{border-color:var(--accent);background:rgba(0,200,255,0.06)}
+.conn-card .icon{font-size:32px;margin-bottom:8px}
+.conn-card .label{font-family:var(--display);font-weight:700;color:var(--text);font-size:15px}
+.conn-card .desc{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:6px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.form-group label{display:block;font-size:0.68rem;color:var(--text3);text-transform:uppercase;
+                  letter-spacing:.1em;font-family:var(--mono);margin-bottom:6px}
+.form-group input, .form-group select{width:100%;background:var(--bg);border:1px solid var(--border);
+       border-radius:8px;padding:10px 12px;color:var(--text);font-family:var(--mono);font-size:0.9rem}
+.form-help{font-size:0.68rem;color:var(--text3);font-family:var(--mono);margin-top:4px}
+.actions{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
+</style>
+
+<!-- Passo 1: tipo di collegamento -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      Passo 1 — Come è collegato al Raspberry Pi?
+    </div>
+  </div>
+  <div class="conn-cards">
+    <div class="conn-card" id="tr-usb" onclick="pickTransport('usb')">
+      <div class="icon">🔌</div>
+      <div class="label">USB (RS-232 seriale)</div>
+      <div class="desc">Cavo seriale + adattatore USB → porta USB del Pi</div>
+    </div>
+    <div class="conn-card" id="tr-tcp" onclick="pickTransport('tcp')">
+      <div class="icon">🔗</div>
+      <div class="label">TCP (rete cablata)</div>
+      <div class="desc">Il device invia via Ethernet al Raspberry Pi</div>
+    </div>
+  </div>
+</div>
+
+<!-- Passo 2: parametri connessione -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v6m0 6v6m11-7h-6m-6 0H1"/></svg>
+      Passo 2 — Parametri di connessione
+    </div>
+  </div>
+
+  <div id="params-usb" style="display:none">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Porta seriale</label>
+        <input id="serial_port" value="{{ device.serial_port or '/dev/ttyUSB1' }}">
+        <div class="form-help">Verifica con: <code>ls /dev/ttyUSB*</code> — o usa il symlink /dev/jerumednexus/*</div>
+      </div>
+      <div class="form-group">
+        <label>Baudrate</label>
+        <select id="baudrate">
+          {% for b in [1200, 2400, 4800, 9600, 19200, 38400, 57600, 115200] %}
+          <option value="{{ b }}"{% if (device.baudrate or 9600) == b %} selected{% endif %}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div id="params-tcp" style="display:none">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Indirizzo di ascolto</label>
+        <input id="listen_host" value="{{ device.listen_host or '0.0.0.0' }}">
+        <div class="form-help">0.0.0.0 = accetta connessioni da qualsiasi IP</div>
+      </div>
+      <div class="form-group">
+        <label>Porta TCP</label>
+        <input id="listen_port" type="number" value="{{ device.listen_port or 5100 }}">
+        <div class="form-help">Configurare la stessa porta sul device</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Passo 3: identità -->
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Passo 3 — Identità e protocollo
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>ID interno (kebab-case)</label>
+      <input id="dev_id" value="{{ device.id or '' }}" {% if editing %}readonly style="opacity:0.7"{% endif %}>
+      <div class="form-help">Es. sysmex-xn550, cobas-c111. Solo [a-z 0-9 _ -], 2-40 caratteri.</div>
+    </div>
+    <div class="form-group">
+      <label>Nome mostrato in UI</label>
+      <input id="display_name" value="{{ device.display_name or '' }}" placeholder="Sysmex XN-550">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group">
+      <label>Vendor</label>
+      <input id="vendor" value="{{ device.vendor or '' }}" placeholder="Sysmex">
+    </div>
+    <div class="form-group">
+      <label>Modello</label>
+      <input id="model" value="{{ device.model or '' }}" placeholder="XN-550">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group" style="grid-column:1/-1">
+      <label>Protocollo</label>
+      <select id="dev_type">
+        <option value="mllp_hl7"      {% if device.type=='mllp_hl7' %}selected{% endif %}>HL7 v2 MLLP (standard, la maggior parte dei device moderni)</option>
+        <option value="sysmex_astm"   {% if device.type=='sysmex_astm' %}selected{% endif %}>ASTM E1381 (Sysmex, alcuni Beckman)</option>
+        <option value="uc1000_serial" {% if device.type=='uc1000_serial' %}selected{% endif %}>UC-1000 native (Menarini urine)</option>
+        <option value="cobas_poct"    {% if device.type=='cobas_poct' %}selected{% endif %}>POCT1-A2 XML (Cobas b101, Afinion)</option>
+        <option value="loc200_http"   {% if device.type=='loc200_http' %}selected{% endif %}>HTTP push (LOC-200, alcuni POCT)</option>
+        <option value="__custom__">— Custom (avanzato) —</option>
+      </select>
+      <div class="form-help">Se il protocollo non è in lista, scegli "Custom" e inserisci l'ID adapter — richiede un plugin Python.</div>
+      <input id="dev_type_custom" placeholder="my_custom_protocol" style="display:none;margin-top:8px">
+    </div>
+  </div>
+  <div class="form-row">
+    <div class="form-group" style="grid-column:1/-1">
+      <label style="display:flex;align-items:center;gap:8px;text-transform:none;letter-spacing:0">
+        <input type="checkbox" id="enabled" {% if device.enabled %}checked{% endif %} style="width:auto">
+        <span>Attiva il device subito (default: disattivato — verifica prima poi attiva)</span>
+      </label>
+    </div>
+  </div>
+</div>
+
+<div class="actions">
+  <a href="/analyzers" class="btn btn-ghost">← Annulla</a>
+  <div style="display:flex;gap:10px">
+    {% if editing %}
+    <button class="btn" style="background:transparent;color:var(--yellow);border:1px solid var(--yellow)"
+            onclick="archiveDevice()">Archivia device</button>
+    {% endif %}
+    <button class="btn btn-primary" onclick="saveDevice()">
+      {{ 'Aggiorna' if editing else 'Crea device' }}
+    </button>
+  </div>
+</div>
+
+<script>
+let TRANSPORT = "{{ 'usb' if device.serial_port else 'tcp' }}";
+
+function pickTransport(t) {
+  TRANSPORT = t;
+  document.getElementById('tr-usb').classList.toggle('selected', t === 'usb');
+  document.getElementById('tr-tcp').classList.toggle('selected', t === 'tcp');
+  document.getElementById('params-usb').style.display = t === 'usb' ? '' : 'none';
+  document.getElementById('params-tcp').style.display = t === 'tcp' ? '' : 'none';
+}
+pickTransport(TRANSPORT);
+
+document.getElementById('dev_type').addEventListener('change', e => {
+  document.getElementById('dev_type_custom').style.display =
+    e.target.value === '__custom__' ? '' : 'none';
+});
+
+async function saveDevice() {
+  const typeSel = document.getElementById('dev_type').value;
+  const typeVal = typeSel === '__custom__'
+    ? document.getElementById('dev_type_custom').value.trim()
+    : typeSel;
+  if (!typeVal) { toast('Protocollo obbligatorio', 'error'); return; }
+  const body = {
+    id:           document.getElementById('dev_id').value.trim(),
+    transport:    TRANSPORT,
+    type:         typeVal,
+    display_name: document.getElementById('display_name').value.trim(),
+    vendor:       document.getElementById('vendor').value.trim(),
+    model:        document.getElementById('model').value.trim(),
+    enabled:      document.getElementById('enabled').checked,
+    serial_port:  document.getElementById('serial_port').value.trim(),
+    baudrate:     parseInt(document.getElementById('baudrate').value, 10),
+    listen_host:  document.getElementById('listen_host').value.trim(),
+    listen_port:  parseInt(document.getElementById('listen_port').value, 10),
+    overwrite:    {{ 'true' if editing else 'false' }},
+  };
+  const editing = {{ 'true' if editing else 'false' }};
+  try {
+    const url = editing ? '/api/devices/' + encodeURIComponent(body.id)
+                        : '/api/devices/create';
+    const method = editing ? 'PUT' : 'POST';
+    const r = await fetch(url, {
+      method: method, headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast(editing ? 'Aggiornato' : 'Creato — gateway ricaricato', 'success');
+      setTimeout(() => window.location.href = '/analyzers', 900);
+    } else {
+      toast('Errore: ' + (d.error || 'save fallito'), 'error');
+    }
+  } catch (e) { toast('Errore rete: ' + e, 'error'); }
+}
+
+async function archiveDevice() {
+  const devId = "{{ device.id }}";
+  // Doppia conferma per evitare click accidentali
+  if (!confirm('Archiviare il device "' + devId + '"?\n\nIl device sarà rimosso dal catalogo attivo ma potrà essere ripristinato dalla sezione "Archivio device".')) return;
+  if (!confirm('CONFERMA FINALE\n\nStai per disattivare e archiviare "' + devId + '".\nSicuro?')) return;
+  try {
+    const r = await fetch('/api/devices/' + encodeURIComponent(devId) + '/archive', {method: 'POST'});
+    const d = await r.json();
+    if (d.ok) {
+      toast('Device archiviato — ripristinabile', 'success');
+      setTimeout(() => window.location.href = '/analyzers', 900);
+    } else {
+      toast('Errore: ' + (d.error || 'archive fallito'), 'error');
+    }
+  } catch (e) { toast('Errore: ' + e, 'error'); }
+}
+</script>
+{% endblock %}

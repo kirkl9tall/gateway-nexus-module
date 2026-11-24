@@ -1,0 +1,26 @@
+# CODEOWNERS -- who reviews what.
+# Docs: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Global fallback -- product maintainer must approve anything.
+*                       @jerumed-nexus/maintainers
+
+# HL7 / FHIR core -- protocol lead
+/src/hl7/               @jerumed-nexus/protocol
+/src/adapters/          @jerumed-nexus/protocol
+
+# Transport / dispatch -- reliability lead
+/src/transport/         @jerumed-nexus/reliability
+
+# Security-sensitive paths -- security lead review required
+/src/security/          @jerumed-nexus/security
+/config/secrets*        @jerumed-nexus/security
+/scripts/enable-tls.sh  @jerumed-nexus/security
+/docs/regulatory/       @jerumed-nexus/security @jerumed-nexus/qms
+
+# Web UI -- frontend maintainer
+/webui/                 @jerumed-nexus/frontend
+
+# CI / release
+/.github/               @jerumed-nexus/devops
+/debian/                @jerumed-nexus/devops
+/scripts/build-*.sh     @jerumed-nexus/devops

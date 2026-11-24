@@ -1,0 +1,10 @@
+id: erba_xl200
+type: mllp_hl7
+enabled: false
+display_name: "Erba XL-200 (Chimica)"
+vendor: Erba Mannheim
+model: XL-200
+listen_host: "0.0.0.0"
+listen_port: 5081
+notes: |
+  Chimica clinica benchtop tedesco. Alternativa economica a Cobas c111.

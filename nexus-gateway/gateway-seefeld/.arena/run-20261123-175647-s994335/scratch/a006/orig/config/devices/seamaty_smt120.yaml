@@ -1,0 +1,8 @@
+id: seamaty_smt120
+type: mllp_hl7
+enabled: false
+display_name: "Seamaty SMT-120 Chemie"
+vendor: Seamaty
+model: SMT-120
+listen_host: "0.0.0.0"
+listen_port: 6000

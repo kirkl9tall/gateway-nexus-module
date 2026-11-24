@@ -1,0 +1,108 @@
+{% extends "wizard/base.html" %}
+{% block form %}
+<h2><span class="step-icon">4</span>Primo Analizzatore</h2>
+<p class="intro">Aggiungiamo il primo analizzatore. Potrai aggiungerne altri dopo dal menu "Analizzatori".</p>
+
+{% if error %}<div class="error-msg">⚠ {{ error }}</div>{% endif %}
+
+<div style="background:#e8f4fd;border:1px solid #b0d4f0;border-radius:8px;padding:14px 16px;margin-bottom:20px;">
+  <strong>💡 Consiglio:</strong> <strong>salta questo passo</strong> e aggiungi gli analizzatori
+  dopo dalla dashboard — è molto più veloce.<br>
+  Nella dashboard trovi il tile <strong>"Device rilevati"</strong>: appena colleghi un cavo USB,
+  il gateway lo riconosce da solo e ti fa scegliere il tipo con un click.
+  <br><br>
+  Il <strong>LOC-200</strong> è l'analizzatore primario e viene gestito automaticamente
+  (card dedicata in dashboard) — non serve aggiungerlo qui.
+</div>
+
+<form method="post" id="skip-form" style="margin-bottom:12px;">
+  <input type="hidden" name="skip" value="1">
+  <button type="submit" class="btn btn-primary" style="width:100%;font-size:1rem;padding:12px;">
+    ⏭  Salta questo passo — aggiungo dopo dalla dashboard
+  </button>
+</form>
+
+<details style="margin-top:16px;">
+  <summary style="cursor:pointer;color:#666;font-size:0.9rem;padding:8px 0;">
+    Preferisci configurare un device adesso? Clicca qui per aprire il form manuale
+  </summary>
+
+  <form method="post" style="margin-top:12px;">
+    <label>Modello <small>(scegli dal catalogo)</small></label>
+    <select name="template">
+      <option value="">— seleziona modello —</option>
+      {% set groups = {} %}
+      {% for t in templates %}
+        {% if groups.update({t.vendor: groups.get(t.vendor, []) + [t]}) %}{% endif %}
+      {% endfor %}
+      {% for vendor, items in groups.items() | sort %}
+        <optgroup label="{{ vendor or 'Altro' }}">
+          {% for t in items %}
+            <option value="{{ t.template }}">{{ t.display }}  —  {{ t.type }}</option>
+          {% endfor %}
+        </optgroup>
+      {% endfor %}
+    </select>
+
+    <label>Nome che vuoi vedere nel pannello <small>(es. "XQ-320 Sala A")</small></label>
+    <input type="text" name="display_name"
+           placeholder="es. Sysmex XQ-320 Sala Prelievi"
+           value="{{ data.first_device_name or '' }}">
+    <p class="hint">Questo nome compare nel LIS come mittente del risultato — se hai
+    più unità dello stesso modello, mettici la sala.</p>
+
+    <label>Porta TCP di ascolto <small>(l'analizzatore invierà i risultati a questa porta)</small></label>
+    <input type="number" name="listen_port" value="{{ data.first_device_port or 5006 }}" min="1024" max="65535">
+    <p class="hint">Default 5006 va bene per la maggior parte dei casi.
+    Se aggiungi una seconda unità dello stesso modello, usa una porta diversa (5007, 5008…).</p>
+
+    <div class="actions">
+      <a href="{{ url_for('wizard.step_3') }}" class="btn btn-secondary">← Indietro</a>
+      <button type="submit" class="btn btn-primary">Aggiungi e avanti →</button>
+    </div>
+  </form>
+</details>
+
+<div style="margin-top:16px;text-align:left;">
+  <a href="{{ url_for('wizard.step_3') }}" class="btn btn-secondary">← Indietro</a>
+</div>
+{% endblock %}
+
+{% block help %}
+<h3>🩸 Cosa fa questo passo</h3>
+<p>Copio il template del modello scelto in un file YAML attivo. Il gateway,
+al prossimo restart, aprirà la porta TCP indicata e ascolterà i risultati.</p>
+
+<h3>🔧 Cosa fa il tecnico dell'analizzatore</h3>
+<ol>
+  <li>Sul menu dell'analizzatore (Sysmex: <b>Service → Host</b>) imposta:
+    <ul>
+      <li><b>Host IP:</b> <code>{{ data.pi_ip or '(IP del Pi)' }}</code></li>
+      <li><b>Porta:</b> quella che hai scritto sopra</li>
+      <li><b>Protocollo:</b> vedi tabella</li>
+    </ul>
+  </li>
+  <li>Salva e riavvia l'analizzatore</li>
+  <li>Fai un test → verifica sul pannello che appaia il risultato</li>
+</ol>
+
+<h3>📋 Protocollo per modello</h3>
+<table style="font-size:0.85rem; width:100%; border-collapse:collapse;">
+<tr><td><b>Sysmex XQ-320</b></td><td>ASTM E1381-02 + ACK/NAK</td></tr>
+<tr><td><b>Sysmex XP-300</b></td><td>ASTM E1381-02, unidirezionale</td></tr>
+<tr><td><b>Cobas b101</b></td><td>POCT1-A2 (USB serial)</td></tr>
+<tr><td><b>UC-1000</b></td><td>RS-232 CSV (USB serial)</td></tr>
+<tr><td><b>LOC-200</b></td><td>Seriale proprietario</td></tr>
+<tr><td><b>Seamaty SD1/SD3</b></td><td>HL7 v2 seriale</td></tr>
+</table>
+
+<div class="callout">
+  <b>Se non sai quale scegliere:</b> chiama il tecnico che ha installato
+  l'analizzatore. La configurazione richiede l'accesso al menu di servizio.
+</div>
+
+<h3>➕ Aggiungere altri device</h3>
+<p>Dopo aver finito il wizard, dal menu <b>Analizzatori → Aggiungi</b>
+puoi aggiungere quanti device vuoi. Ogni device ha il suo file YAML separato
+e la sua porta TCP.</p>
+{% endblock %}

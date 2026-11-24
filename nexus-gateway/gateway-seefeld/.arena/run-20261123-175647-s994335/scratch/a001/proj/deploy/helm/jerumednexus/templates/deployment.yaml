@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "jerumednexus.fullname" . }}
+  labels: {{- include "jerumednexus.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels: {{- include "jerumednexus.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  template:
+    metadata:
+      labels: {{- include "jerumednexus.selectorLabels" . | nindent 8 }}
+      annotations:
+        checksum/config: {{ .Values.config.gatewayYamlContent | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "jerumednexus.serviceAccountName" . }}
+      securityContext: {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: gateway
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext: {{- toYaml .Values.securityContext | nindent 12 }}
+          env:
+            - {name: LOG_FORMAT, value: json}
+            - {name: SLOT, value: primary}
+          ports:
+            - {name: http, containerPort: 8088, protocol: TCP}
+          livenessProbe:  {{- toYaml .Values.livenessProbe  | nindent 12 }}
+          readinessProbe: {{- toYaml .Values.readinessProbe | nindent 12 }}
+          resources: {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - {name: config,  mountPath: /opt/jerumednexus/config, readOnly: true}
+            - {name: secrets, mountPath: /opt/jerumednexus/config/dlq_key, subPath: dlq_key, readOnly: true}
+            - {name: data,    mountPath: /opt/jerumednexus/logs}
+            - {name: tmp,     mountPath: /tmp}
+      volumes:
+        - name: config
+          configMap: {name: {{ include "jerumednexus.fullname" . }}}
+        - name: secrets
+          secret: {secretName: {{ include "jerumednexus.fullname" . }}-secrets}
+        - name: tmp
+          emptyDir: {medium: Memory, sizeLimit: 64Mi}
+        {{- if .Values.persistence.enabled }}
+        - name: data
+          persistentVolumeClaim: {claimName: {{ include "jerumednexus.fullname" . }}-data}
+        {{- else }}
+        - name: data
+          emptyDir: {sizeLimit: 512Mi}
+        {{- end }}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Risultati") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<h1 class="page-h1">{{ t("Risultati") }}</h1>
+<p class="page-desc">{{ t("Ogni risultato arrivato dagli apparecchi e dove è stato inviato. Tocca una riga per vedere i valori.") }}</p>
+
+<form class="rs-filters" id="rs-filters" onsubmit="return false">
+  <label class="df-search rs-search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></svg>
+    <input type="search" name="q" placeholder="{{ t('Cerca un paziente o un campione (ID)') }}" autocomplete="off" aria-label="{{ t('Cerca un paziente o un campione (ID)') }}">
+  </label>
+
+  <div class="rs-seg" role="radiogroup" aria-label="{{ t('Periodo') }}">
+    {% for v, label in [("today", "Oggi"), ("yesterday", "Ieri"), ("7d", "Ultimi 7 giorni"), ("30d", "Ultimi 30 giorni"), ("all", "Tutto")] %}
+    <label><input type="radio" name="period" value="{{ v }}" {% if loop.first %}checked{% endif %}><span>{{ t(label) }}</span></label>
+    {% endfor %}
+  </div>
+
+  <div class="rs-row">
+    <div class="rs-seg" role="radiogroup" aria-label="{{ t('Stato') }}">
+      {% for v, label in [("", "Tutti"), ("ok", "Recapitati"), ("problem", "Non recapitati")] %}
+      <label><input type="radio" name="status" value="{{ v }}" {% if loop.first %}checked{% endif %}><span>{{ t(label) }}</span></label>
+      {% endfor %}
+    </div>
+    <label class="tz-pick">{{ t("Apparecchio") }}
+      <select name="device" class="form-control">
+        <option value="">{{ t("Tutti gli apparecchi") }}</option>
+        {% for d in devices %}<option value="{{ d }}">{{ d }}</option>{% endfor %}
+      </select>
+    </label>
+  </div>
+</form>
+
+<div id="rs-list" aria-live="polite"><p class="ck-running"><span class="ck-spinner"></span>{{ t("Carico…") }}</p></div>
+
+{# Detail: a panel over the page (full screen on phones) #}
+<div class="rs-overlay" id="rs-overlay" hidden></div>
+<aside class="rs-panel" id="rs-panel" role="dialog" aria-modal="true" aria-labelledby="rs-panel-title" hidden>
+  <button class="btn-icon rs-close" type="button" onclick="closeDetail()" aria-label="{{ t('Chiudi') }}">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg>
+  </button>
+  <div id="rs-panel-body"></div>
+</aside>
+
+<script>
+(function () {
+  var form = document.getElementById('rs-filters');
+  var list = document.getElementById('rs-list');
+  var timer = null, lastFocus = null;
+
+  async function load() {
+    var params = new URLSearchParams(new FormData(form));
+    try {
+      var r = await fetch('/results/list?' + params.toString(), {credentials: 'same-origin'});
+      if (r.ok) list.innerHTML = await r.text();
+    } catch (e) { /* keep the current list */ }
+  }
+  form.addEventListener('change', load);
+  form.q.addEventListener('input', function () { clearTimeout(timer); timer = setTimeout(load, 300); });
+  load();
+  setInterval(function () { if (document.getElementById('rs-panel').hidden) load(); }, 30000);
+
+  // ── Detail panel ──
+  window.openDetail = async function (id, row) {
+    lastFocus = row || document.activeElement;
+    var body = document.getElementById('rs-panel-body');
+    body.innerHTML = '<p class="ck-running"><span class="ck-spinner"></span>' + T('Carico…') + '</p>';
+    document.getElementById('rs-overlay').hidden = false;
+    var panel = document.getElementById('rs-panel');
+    panel.hidden = false;
+    panel.querySelector('.rs-close').focus();
+    try {
+      var r = await fetch('/results/' + encodeURIComponent(id), {credentials: 'same-origin'});
+      body.innerHTML = r.ok ? await r.text() : '<p class="ov-empty">' + T('Risultato non trovato.') + '</p>';
+    } catch (e) {
+      body.innerHTML = '<p class="ov-empty">' + T('Errore di rete: {msg}', {msg: e.message}) + '</p>';
+    }
+  };
+  window.closeDetail = function () {
+    document.getElementById('rs-panel').hidden = true;
+    document.getElementById('rs-overlay').hidden = true;
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  };
+  document.getElementById('rs-overlay').addEventListener('click', closeDetail);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !document.getElementById('rs-panel').hidden) closeDetail();
+  });
+
+  window.resendResult = async function (sampleId, btn) {
+    btn.disabled = true;
+    try {
+      var r = await fetch('/api/sample/' + encodeURIComponent(sampleId) + '/resend', {method: 'POST'});
+      var d = await r.json();
+      toast(d.ok ? T('Risultato inviato di nuovo.') : T('Errore: {msg}', {msg: d.error || T('operazione non riuscita')}), d.ok ? 'info' : 'error');
+    } catch (e) { toast(T('Errore di rete: {msg}', {msg: e.message}), 'error'); }
+    btn.disabled = false;
+  };
+})();
+</script>
+{% endblock %}

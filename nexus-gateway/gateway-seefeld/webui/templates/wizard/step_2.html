@@ -1,0 +1,47 @@
+{% extends "wizard/base.html" %}
+{% block form %}
+<h2><span class="step-icon">2</span>Account Amministratore</h2>
+<p class="intro">Crea l'account admin per accedere al pannello dopo il setup.</p>
+
+{% if error %}<div class="error-msg">⚠ {{ error }}</div>{% endif %}
+
+<form method="post">
+  <label>Nome utente <small>(fisso: admin)</small></label>
+  <input type="text" value="admin" disabled>
+
+  <label>Password <small>(minimo 10 caratteri, meglio 14+)</small></label>
+  <input type="password" name="password" required minlength="10"
+         autocomplete="new-password" placeholder="••••••••••">
+
+  <label>Conferma password</label>
+  <input type="password" name="confirm" required minlength="10"
+         autocomplete="new-password" placeholder="••••••••••">
+
+  <div class="actions">
+    <a href="{{ url_for('wizard.step_1') }}" class="btn btn-secondary">← Indietro</a>
+    <button type="submit" class="btn btn-primary">Crea admin e avanti →</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block help %}
+<h3>🔐 Cosa fa questo passo</h3>
+<p>Crei la <b>password dell'unico account</b> che potrà configurare il gateway. Sarà l'account <code>admin</code>.</p>
+
+<h3>💡 Consigli password</h3>
+<ul>
+  <li>Almeno <b>14 caratteri</b> (12 sono minimo tecnico)</li>
+  <li>Mix di maiuscole + minuscole + numeri + simbolo</li>
+  <li>Non riutilizzare la password del tuo email o altri sistemi</li>
+  <li>Salvala in un password manager (Bitwarden, 1Password, KeePassXC)</li>
+</ul>
+
+<div class="callout error">
+  <b>Importante:</b> se perdi la password, l'unico modo per rientrare è SSH sul Pi
+  con l'account di sistema, cosa che richiede l'IT. <b>Non perderla.</b>
+</div>
+
+<h3>🔒 2FA (opzionale, dopo)</h3>
+<p>Dopo il primo login, dal menu <b>Utenti</b> potrai attivare il codice TOTP a 6 cifre
+(Google Authenticator, Authy, Aegis). Fortemente consigliato per studio con più operatori.</p>
+{% endblock %}

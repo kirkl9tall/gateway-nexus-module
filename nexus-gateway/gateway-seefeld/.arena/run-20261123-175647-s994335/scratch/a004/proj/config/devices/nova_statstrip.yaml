@@ -1,0 +1,10 @@
+id: nova_statstrip
+type: mllp_hl7
+enabled: false
+display_name: "Nova StatStrip (Glucose POCT)"
+vendor: Nova Biomedical
+model: StatStrip
+listen_host: "0.0.0.0"
+listen_port: 5071
+notes: |
+  Glucometer POCT ospedaliero. Docking station invia via HL7.

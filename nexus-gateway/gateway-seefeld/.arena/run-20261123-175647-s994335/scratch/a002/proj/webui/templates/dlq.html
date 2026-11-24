@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Da rispedire — JerumedNexus{% endblock %}
+{% block page_title %}Messaggi da rispedire{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<style>
+.dlq-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:22px}
+.dlq-table{width:100%;border-collapse:collapse;font-size:0.95rem}
+.dlq-table th{text-align:left;font-size:0.72rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text3);font-weight:500;padding:10px 8px;border-bottom:1px solid var(--border)}
+.dlq-table td{padding:12px 8px;border-bottom:1px solid var(--border);vertical-align:middle}
+.dlq-table tr.sel td{background:rgba(29,31,32,0.035)}
+.dlq-table input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.dlq-reason{display:inline-flex;align-items:center;gap:8px}
+.dlq-reason i{width:8px;height:8px;display:inline-block;flex:none}
+.dlq-actions{text-align:right;white-space:nowrap}
+.dlq-link{background:none;border:0;color:var(--accent-ink);font-family:var(--display);font-weight:600;font-size:0.95rem;cursor:pointer;padding:4px 8px}
+.dlq-link:hover{color:var(--accent)}
+.dlq-preview{margin:0;padding:12px 16px;background:var(--bg3);border-left:2px solid var(--accent);font-family:var(--mono);font-size:0.8rem;line-height:1.7;white-space:pre-wrap;max-height:320px;overflow:auto}
+.dlq-empty{padding:48px 0;text-align:center}
+.dlq-empty .h{font-family:var(--display);font-weight:600;font-size:1.5rem}
+.dlq-empty .s{color:var(--text3)}
+</style>
+
+<div class="dlq-head">
+  <div>
+    <div class="page-kicker">Messaggi</div>
+    <h1 class="page-h1" style="margin-bottom:6px;">Messaggi da rispedire</h1>
+    <div style="color:var(--text2);max-width:680px;text-wrap:pretty;">
+      Risultati che il gateway non è riuscito a consegnare dopo tutti i tentativi.
+      Nessun dato è perso: rispediscili quando il gestionale è di nuovo raggiungibile.
+    </div>
+  </div>
+  <button class="btn btn-primary" id="btn-resend-sel" onclick="resendSelected()" style="display:none;"></button>
+</div>
+
+<div id="dlq-container">
+  <div class="dlq-empty"><div class="s">Caricamento…</div></div>
+</div>
+
+<script>
+var _entries = [], _sel = {};
+
+// Legge una risposta che DOVREBBE essere JSON senza esplodere se non lo e'.
+// Quando il server restituisce una pagina HTML di errore, r.json() solleva
+// "SyntaxError: The string did not match the expected pattern" -- un
+// messaggio che non dice niente e nasconde la causa vera. Meglio mostrare
+// il codice di stato e l'inizio della risposta.
+async function _leggiJson(r) {
+  const testo = await r.text();
+  try {
+    return JSON.parse(testo);
+  } catch (e) {
+    const estratto = testo.replace(/<[^>]*>/g, ' ')
+                          .replace(/\s+/g, ' ').trim().slice(0, 160);
+    return {ok: false,
+            error: 'il server ha risposto ' + r.status + ' ' + r.statusText +
+                   (estratto ? ' — ' + estratto : '')};
+  }
+}
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+}
+
+function fmtTs(ts) {
+  if (!ts) return '';
+  var d = new Date(ts);
+  if (isNaN(d.getTime())) return esc(ts);
+  var p = function(n) { return String(n).padStart(2, '0'); };
+  return p(d.getDate()) + '.' + p(d.getMonth() + 1) + '. ' + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds());
+}
+
+function isReject(reason) {
+  return /reject|rifiut|AR\b|AE\b|nack/i.test(reason || '');
+}
+
+async function loadDlq() {
+  try {
+    const r = await fetch('/api/dlq?limit=200');
+    const d = await _leggiJson(r);
+    _entries = d.entries || [];
+    var keep = {};
+    _entries.forEach(function(e) { keep[e.control_id] = _sel[e.control_id] !== false; });
+    _sel = keep;
+    render();
+  } catch (e) {
+    document.getElementById('dlq-container').innerHTML =
+      '<div class="dlq-empty"><div class="s">Errore di caricamento: ' + esc(e) + '</div></div>';
+  }
+}
+
+function selectedIds() {
+  return _entries.filter(function(e) { return _sel[e.control_id]; }).map(function(e) { return e.control_id; });
+}
+
+function updateSelBtn() {
+  var n = selectedIds().length;
+  var b = document.getElementById('btn-resend-sel');
+  b.style.display = _entries.length ? '' : 'none';
+  b.disabled = n === 0;
+  b.textContent = 'Rispedisci selezionati (' + n + ')';
+}
+
+function render() {
+  const c = document.getElementById('dlq-container');
+  if (!_entries.length) {
+    c.innerHTML = '<div class="dlq-empty"><div class="h">Nessun messaggio da rispedire.</div>' +
+                  '<div class="s">Tutti i risultati sono stati recapitati.</div></div>';
+    updateSelBtn();
+    return;
+  }
+  var all = selectedIds().length === _entries.length;
+  let html = '<table class="dlq-table"><thead><tr>' +
+    '<th style="width:32px;"><input type="checkbox" ' + (all ? 'checked' : '') + ' onchange="toggleAll(this.checked)" aria-label="Seleziona tutti"></th>' +
+    '<th>Quando</th><th>Campione</th><th>Analizzatore</th><th>Destinazione</th><th>Motivo</th><th></th></tr></thead><tbody>';
+  _entries.forEach(function(e) {
+    var cid = esc(e.control_id);
+    var rej = isReject(e.reason);
+    var col = rej ? 'var(--red)' : 'var(--yellow)';
+    html += '<tr class="' + (_sel[e.control_id] ? 'sel' : '') + '">' +
+      '<td><input type="checkbox" ' + (_sel[e.control_id] ? 'checked' : '') + ' onchange="toggleOne(\'' + cid + '\', this.checked)"></td>' +
+      '<td style="font-variant-numeric:tabular-nums;white-space:nowrap;">' + fmtTs(e.ts) + '</td>' +
+      '<td style="font-weight:500;">' + esc(e.sample_id) + '</td>' +
+      '<td>' + esc(e.device) + '</td>' +
+      '<td>' + esc((e.targets || []).join(', ')) + '</td>' +
+      '<td><span class="dlq-reason" style="color:' + col + ';"><i style="background:' + col + ';"></i>' + esc(e.reason) + '</span></td>' +
+      '<td class="dlq-actions">' +
+        '<button class="dlq-link" onclick="viewDlq(\'' + cid + '\', this)">Mostra HL7</button>' +
+        '<button class="btn btn-ghost" onclick="replayDlq(\'' + cid + '\')">Rispedisci</button>' +
+      '</td></tr>' +
+      '<tr id="pvrow-' + cid + '" style="display:none;"><td></td><td colspan="6"><pre class="dlq-preview" id="pv-' + cid + '"></pre></td></tr>';
+  });
+  html += '</tbody></table>';
+  c.innerHTML = html;
+  updateSelBtn();
+}
+
+function toggleAll(on) {
+  _entries.forEach(function(e) { _sel[e.control_id] = on; });
+  render();
+}
+function toggleOne(cid, on) { _sel[cid] = on; render(); }
+
+async function viewDlq(cid, btn) {
+  const row = document.getElementById('pvrow-' + cid);
+  const el = document.getElementById('pv-' + cid);
+  if (row.style.display !== 'none') { row.style.display = 'none'; btn.textContent = 'Mostra HL7'; return; }
+  try {
+    const r = await fetch('/api/dlq/' + cid);
+    const d = await _leggiJson(r);
+    if (d.ok) { el.textContent = (d.hl7 || '').replace(/\r/g, '\n'); row.style.display = ''; btn.textContent = 'Nascondi'; }
+    else toast(d.error || 'errore', 'error');
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+async function replayOne(cid) {
+  const r = await fetch('/api/dlq/' + cid + '/replay', {method:'POST'});
+  return _leggiJson(r);
+}
+
+async function replayDlq(cid) {
+  if (!confirm('Rispedire questo messaggio a tutti i gestionali attivi?\nSe il gestionale lo aveva già ricevuto, potrebbe comparire un doppione.')) return;
+  try {
+    const d = await replayOne(cid);
+    if (d.ok) toast('Rispedito: ' + ((d.summary && d.summary.succeeded) || []).join(', '), 'success');
+    else toast('Non rispedito: ' + (d.error || 'errore'), 'error');
+  } catch (e) { toast('errore: ' + e, 'error'); }
+  loadDlq();
+}
+
+async function resendSelected() {
+  var ids = selectedIds();
+  if (!ids.length) return;
+  if (!confirm('Rispedire ' + ids.length + ' messaggi?\nSe il gestionale li aveva già ricevuti, potrebbe comparire un doppione.')) return;
+  var ok = 0, fail = 0, motivi = [];
+  for (const cid of ids) {
+    try {
+      const d = await replayOne(cid);
+      if (d.ok) { ok++; }
+      else { fail++; if (d.error) motivi.push(d.error); }
+    }
+    catch (e) { fail++; motivi.push(String(e && e.message || e)); }
+  }
+  // Il motivo del primo fallimento, invece del solo conteggio: undici
+  // "non riusciti" senza spiegazione non dicono da dove ricominciare.
+  var msg = ok + ' rispediti';
+  if (fail) {
+    msg += ', ' + fail + ' non riusciti';
+    if (motivi.length) msg += ' — ' + motivi[0];
+  }
+  toast(msg, fail ? 'error' : 'success');
+  loadDlq();
+}
+
+loadDlq();
+setInterval(loadDlq, 30000);
+</script>
+{% endblock %}

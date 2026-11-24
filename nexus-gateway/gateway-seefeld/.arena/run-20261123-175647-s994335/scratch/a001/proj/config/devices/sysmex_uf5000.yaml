@@ -1,0 +1,13 @@
+id: sysmex_uf5000
+type: sysmex_astm
+enabled: false
+display_name: "Sysmex UF-5000 Urin-Sediment"
+vendor: Sysmex
+model: UF-5000
+listen_host: "0.0.0.0"
+listen_port: 5012
+astm_mode: "1381-02"
+unidirectional: false
+notes: >
+  Sysmex UF-5000 flagship urine sediment analyzer.
+  ASTM E1381-02 over TCP oppure HL7 v2. Include canale batterico (BACT).

@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+{% block title %}Frame Inspector — Elenco{% endblock %}
+
+{% block content %}
+<style>
+  .fi-search { display: flex; gap: 8px; margin-bottom: 16px; }
+  .fi-search input { flex: 1; padding: 8px 12px; border: 1px solid var(--border, #ccc); border-radius: 4px; }
+  .fi-search button { padding: 8px 16px; background: var(--primary, #0891b2); color: white; border: none; border-radius: 4px; cursor: pointer; }
+  .fi-list { width: 100%; border-collapse: collapse; }
+  .fi-list th, .fi-list td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border, #eee); }
+  .fi-list th { background: var(--surface-alt, #f6f7fa); font-size: 0.85rem; }
+  .fi-list a { color: var(--primary, #0891b2); text-decoration: none; font-family: monospace; }
+  .fi-list a:hover { text-decoration: underline; }
+  .fi-empty { padding: 40px; text-align: center; color: var(--muted, #666); }
+  .fi-resend { font-size: 11px; padding: 4px 10px; border-radius: 6px; cursor: pointer;
+               font-family: var(--mono, monospace); white-space: nowrap;
+               border: 1px solid rgba(0,229,160,0.4); background: rgba(0,229,160,0.08); color: #00b37e; }
+  .fi-resend:disabled { opacity: 0.55; cursor: default; }
+</style>
+
+<h1>Frame Inspector</h1>
+<p style="color: var(--muted, #666); font-size: 0.9rem;">
+  Ispeziona il payload raw ricevuto dal device e ogni trasformazione applicata
+  prima dell'invio al gestionale medico.
+</p>
+
+<form class="fi-search" method="get" onsubmit="location.href='/inspect/' + encodeURIComponent(document.getElementById('sid').value); return false;">
+  <input id="sid" type="search" placeholder="sample_id (es. SN0042, PAT-42)" autofocus>
+  <button type="submit">Ispeziona</button>
+</form>
+
+<h3>Ultimi 25 sample</h3>
+{% if recent %}
+<table class="fi-list">
+  <thead>
+    <tr>
+      <th>Timestamp</th>
+      <th>Device</th>
+      <th>Sample</th>
+      <th>Patient</th>
+      <th>Analiti</th>
+      <th>Status</th>
+      <th>Reinvio</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for r in recent %}
+    <tr>
+      <td>{{ r.ts }}</td>
+      <td>{{ r.device }}</td>
+      <td><a href="{{ url_for('inspect.inspect_sample', sample_id=r.sample_id) }}">{{ r.sample_id }}</a></td>
+      <td>{{ r.patient_id }}</td>
+      <td>{{ r.analytes }}</td>
+      <td>{{ r.status }}</td>
+      <td>
+        {% if r.sample_id %}
+        <button class="fi-resend" onclick="resendSample(this, '{{ r.sample_id }}')">
+          Reinvia
+        </button>
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% else %}
+<div class="fi-empty">Nessun dispatch nel database.</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Re-dispatch a sample the gestionale never picked up. The server decides
+// whether to rebuild the message with the current config or resend the exact
+// original bytes, and says which in `mode`.
+async function resendSample(btn, sid) {
+  if (!confirm('Reinviare il campione ' + sid + ' al gestionale?')) return;
+  const original = btn.textContent.trim();
+  btn.disabled = true;
+  btn.textContent = 'invio…';
+  try {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const r = await fetch('/api/sample/' + encodeURIComponent(sid) + '/resend', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': meta ? meta.content : ''
+      },
+      body: '{}'
+    });
+    const d = await r.json();
+    if (d.ok) {
+      const dest = ((d.summary && d.summary.succeeded) || []).join(', ') || 'gestionale';
+      toast('Campione ' + sid + ' reinviato a ' + dest +
+            (d.mode === 'verbatim' ? ' (copia originale)' : ''), 'success');
+      btn.textContent = 'inviato';
+      return;
+    }
+    const err = d.error ||
+      Object.values((d.summary && d.summary.errors) || {}).join('; ') ||
+      'errore sconosciuto';
+    toast('Reinvio fallito: ' + err, 'error');
+  } catch (e) {
+    toast('Errore rete: ' + e, 'error');
+  }
+  btn.disabled = false;
+  btn.textContent = original;
+}
+</script>
+{% endblock %}

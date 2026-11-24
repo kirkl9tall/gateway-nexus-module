@@ -1,0 +1,632 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Apparecchi") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<style>
+.az-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem;margin-bottom:1.5rem}
+.az-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.az-card.active-device{border-left:3px solid var(--accent)}
+.az-card.inactive-device{border-left:3px solid var(--border)}
+.az-card-header{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border)}
+.az-icon{width:36px;height:36px;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px}
+.az-icon-blue{background:rgba(0,200,255,0.1)}
+.az-icon-green{background:rgba(0,229,160,0.1)}
+.az-icon-amber{background:rgba(255,184,0,0.1)}
+.az-icon-pink{background:rgba(255,64,96,0.1)}
+.az-icon-teal{background:rgba(0,200,255,0.08)}
+.az-icon-orange{background:rgba(255,140,0,0.1)}
+.az-icon-violet{background:rgba(150,100,255,0.1)}
+.az-name{font-size:14px;font-weight:600;color:var(--text);line-height:1.2;font-family:var(--display)}
+.az-model{font-size:11px;color:var(--text3);margin-top:2px;font-family:var(--mono)}
+.az-status{margin-left:auto;display:flex;align-items:center;gap:5px;font-size:11px;white-space:nowrap;font-family:var(--mono)}
+.az-status .sdot{width:7px;height:7px;border-radius:50%}
+.az-status.on{color:var(--green)}.az-status.on .sdot{background:var(--green);box-shadow:0 0 5px var(--green);animation:pulse 2s infinite}
+.az-status.off{color:var(--text3)}.az-status.off .sdot{background:var(--text3)}
+.az-body{padding:12px 16px}
+.az-group{margin-bottom:10px}.az-group:last-child{margin-bottom:0}
+.az-group-label{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-family:var(--mono)}
+.az-pills{display:flex;flex-wrap:wrap;gap:4px}
+.az-pill{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--bg3);color:var(--text2);border:1px solid var(--border);font-family:var(--mono)}
+.az-pill.sp{background:rgba(0,200,255,0.1);color:var(--accent);border-color:rgba(0,200,255,0.3)}
+.az-footer{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;background:var(--bg3);border-top:1px solid var(--border)}
+.az-footer-info{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.az-btn{font-size:12px;padding:4px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg2);color:var(--text2);cursor:pointer;text-decoration:none;transition:all .15s}
+.az-btn:hover{border-color:var(--accent);color:var(--accent)}
+.tag-new{font-size:9px;padding:1px 5px;border-radius:3px;background:rgba(0,200,255,0.15);color:var(--accent);border:1px solid rgba(0,200,255,0.3);vertical-align:middle;margin-left:4px;font-family:var(--mono)}
+.az-tabs{display:flex;border-bottom:1px solid var(--border);margin-bottom:1.25rem}
+.az-tab{font-size:13px;padding:9px 18px;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;text-decoration:none;display:inline-block;transition:all .15s}
+.az-tab:hover{color:var(--text)}.az-tab.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:600}
+.dev-sel{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:1rem}
+.ds-btn{font-size:12px;padding:4px 12px;border:1px solid var(--border);border-radius:99px;background:var(--bg3);color:var(--text3);cursor:pointer;font-family:var(--mono);transition:all .15s}
+.ds-btn.active{background:rgba(0,200,255,0.1);color:var(--accent);border-color:rgba(0,200,255,0.4)}
+.ds-btn:hover:not(.active){color:var(--text)}
+.ds-grp{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:6px 2px 3px;width:100%;font-family:var(--mono)}
+.map-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden}
+.map-table{width:100%;border-collapse:collapse;font-size:13px}
+.map-table th{font-size:10px;font-weight:600;color:var(--text3);text-align:left;padding:8px 14px;background:var(--bg3);border-bottom:1px solid var(--border);font-family:var(--mono);text-transform:uppercase;letter-spacing:.06em}
+.map-table td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--text);vertical-align:middle}
+.map-table tr:last-child td{border-bottom:none}.map-table tr:hover td{background:var(--bg3)}
+.map-table td:first-child{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.map-table td:nth-child(3){font-family:var(--mono);font-size:12px;color:var(--text2)}
+.ref{font-size:11px;color:var(--text3);font-family:var(--mono)}
+.ports-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem}
+.port-box{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:16px}
+.port-box-title{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px;font-family:var(--display)}
+.port-row{display:flex;align-items:flex-start;gap:8px;margin-bottom:7px;font-size:12px}.port-row:last-child{margin-bottom:0}
+.pr-label{color:var(--text3);min-width:130px;flex-shrink:0;font-family:var(--mono);padding-top:2px}
+.pr-val{font-family:var(--mono);font-size:11px;background:var(--bg3);padding:2px 8px;border-radius:5px;color:var(--text2);border:1px solid var(--border)}
+.proto{font-size:11px;padding:2px 8px;border-radius:99px;font-family:var(--mono)}
+.proto-tcp{background:rgba(0,119,255,0.15);color:#4da6ff;border:1px solid rgba(0,119,255,0.3)}
+.proto-serial{background:rgba(0,229,160,0.12);color:var(--green);border:1px solid rgba(0,229,160,0.3)}
+.proto-mllp{background:rgba(150,100,255,0.12);color:#b388ff;border:1px solid rgba(150,100,255,0.3)}
+.proto-http{background:rgba(255,184,0,0.12);color:var(--yellow);border:1px solid rgba(255,184,0,0.3)}
+</style>
+
+{# ── For everybody: the machines, up or down ── #}
+{% from "_ui.html" import chip %}
+{% set n_on = ov.machines|selectattr('state', 'equalto', 'online')|list|length %}
+{% set n_idle = ov.machines|selectattr('state', 'equalto', 'idle')|list|length %}
+{% set n_bad = ov.machines|selectattr('level', 'in', ['critical', 'warning'])|list|length %}
+<h1 class="page-h1">{{ t("I tuoi apparecchi") }}</h1>
+<p class="page-desc">{{ t("Ogni apparecchio collegato al gateway, e se sta inviando i risultati.") }}</p>
+
+{% if ov.machines %}
+<div class="az-summary">
+  {% if n_on %}{{ chip('good', t("{n} collegati", n=n_on)) }}{% endif %}
+  {% if n_idle %}{{ chip('neutral', t("{n} in attesa di analisi", n=n_idle)) }}{% endif %}
+  {% if n_bad %}{{ chip('critical' if ov.machines|selectattr('level', 'equalto', 'critical')|list else 'warning', t("{n} da controllare", n=n_bad)) }}{% endif %}
+  {% if not ov.gateway.on %}{{ chip('critical', t("Gateway spento")) }}{% endif %}
+</div>
+{% endif %}
+
+<div class="az-usb-new" id="az-usb-new" hidden>
+  <strong>{{ t("Nuovo apparecchio collegato via USB") }}</strong>
+  <span id="az-usb-new-text"></span>
+</div>
+
+<div class="mc-grid" style="margin-bottom:32px;">
+  {% for m in ov.machines %}
+  {% include "_machine_card.html" %}
+  {% endfor %}
+
+  {# How to add a machine: plain steps; the full guided flow comes with sprint story C #}
+  <article class="mc mc-add">
+    <h3>{{ t("Collegare un nuovo apparecchio") }}</h3>
+    <ol>
+      <li><b>{{ t("Cavo USB") }}</b> — {{ t("inseriscilo nel gateway. L'apparecchio compare qui da solo dopo qualche secondo.") }}</li>
+      <li><b>{{ t("Cavo di rete") }}</b> — {{ t("il tecnico imposta una volta l'indirizzo del gateway sull'apparecchio.") }}</li>
+      <li>{{ t("Esegui un'analisi di prova: quando arriva, l'apparecchio diventa verde.") }}</li>
+    </ol>
+    <p class="mc-hint">{{ t("Serve aiuto? Assistenza: +41 78 402 05 99") }}</p>
+  </article>
+</div>
+
+{# ── For the technician: catalog, USB scan, mappings, ports. Bottom, closed. ── #}
+<details class="tech-zone tech-only" id="tech-zone">
+  <summary>{{ t("Dettagli per il tecnico") }} <small>{{ t("catalogo, scansione USB, parametri, porte e protocolli") }}</small></summary>
+  <div class="tech-zone-body">
+
+<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem">
+  <div>
+    <div style="font-family:var(--display);font-size:1.1rem;font-weight:700;color:var(--text)">Analizzatori</div>
+    <div style="font-size:12px;color:var(--text3);font-family:var(--mono);margin-top:3px">10 dispositivi configurati · stato automatico</div>
+  </div>
+</div>
+
+{% if device_catalog %}
+<!-- Catalogo device dinamico (letto da config/devices/) -->
+<div class="card" style="margin-bottom:1rem;padding:14px">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-family:var(--display);font-weight:700;color:var(--text);font-size:13px">
+      Catalogo device disponibili ({{ device_catalog|length }})
+    </div>
+    <a href="/devices/new" class="az-btn" style="background:rgba(0,229,160,0.08);
+        color:#00e5a0;border-color:rgba(0,229,160,0.4);text-decoration:none">+ Aggiungi device</a>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:8px">
+    {% for d in device_catalog %}
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+      <div style="font-family:var(--display);font-weight:600;color:var(--text);font-size:13px">
+        {{ d.display_name or d._id }}
+      </div>
+      <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:3px">
+        {{ d.vendor or '' }} · {{ d.type or '?' }}
+        {% if d.enabled %}<span style="color:#00e5a0"> · attivo</span>
+        {% else %}<span style="color:var(--text3)"> · non attivo</span>{% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Plug-and-play discovery panel — always visible so the scan buttons are
+     always reachable (previously the whole panel was hidden when no device
+     was detected yet, so you couldn't even trigger a scan). -->
+<div id="discovery-panel" style="display:block;background:var(--bg2);border:1px solid rgba(0,229,160,0.35);
+     border-left:3px solid #00e5a0;border-radius:var(--radius);padding:14px 16px;margin-bottom:1rem">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+    <div style="font-family:var(--display);font-weight:700;color:#00e5a0;font-size:14px">
+      &#128260; Plug &amp; Play — device rilevati
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="az-btn" id="btn-discover-usb" onclick="discoverUsb()">Scansione USB</button>
+      <!-- "Scansione LAN" removed: the lab analyzers connect TO the gateway
+           (gateway = listener), so a LAN scan never finds them. TCP devices
+           are added manually (device + listen port + protocol). -->
+      <span style="font-size:11px;color:var(--text3);font-family:var(--mono)">Device TCP: aggiungili da “+ Aggiungi device” (porta + protocollo)</span>
+    </div>
+  </div>
+  <div id="discovery-list" style="display:grid;grid-template-columns:1fr;gap:8px"></div>
+</div>
+
+<div class="az-tabs">
+  <a class="az-tab active" onclick="showTab('overview',this);return false" href="#">Panoramica</a>
+  <a class="az-tab" onclick="showTab('params',this);return false" href="#">Parametri &amp; Mapping</a>
+  <a class="az-tab" onclick="showTab('ports',this);return false" href="#">Porte &amp; Protocolli</a>
+</div>
+
+<!-- TAB Panoramica -->
+<div id="tab-overview">
+<div class="az-grid">
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-amber">🟡</div>
+      <div><div class="az-name">LOC-200 Analyser</div><div class="az-model">Klinische Chemie · HTTP/JSON · Port 5003</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Leber, Niere, Lipide, Enzyme</div>
+      <div class="az-pills"><span class="az-pill">Albumin</span><span class="az-pill">Gesamtprotein</span><span class="az-pill">Globuline</span><span class="az-pill">ALP</span><span class="az-pill">Gamma-GT</span><span class="az-pill">ALT (GPT)</span><span class="az-pill">AST (GOT)</span><span class="az-pill">Bilirubin gesamt</span><span class="az-pill">Harnsäure</span><span class="az-pill">Harnstoff</span><span class="az-pill">Kreatinin</span><span class="az-pill">eGFR</span><span class="az-pill">Amylase</span><span class="az-pill">Glukose</span><span class="az-pill">Cholesterin</span><span class="az-pill">Triglyzeride</span><span class="az-pill">HDL-C</span><span class="az-pill">LDL-C</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">HTTP/JSON → HL7 2.3 · Port 5003</span><a class="az-btn" onclick="selectDev('loc200');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-blue">🔵</div>
+      <div><div class="az-name">Sysmex XP-300</div><div class="az-model">Hämatologie · TCP/ASTM · Port 5000</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Blutbild (20 Parameter)</div>
+      <div class="az-pills"><span class="az-pill">Leukozyten</span><span class="az-pill">Erythrozyten</span><span class="az-pill">Hämoglobin</span><span class="az-pill">Hämatokrit</span><span class="az-pill">Thrombozyten</span><span class="az-pill">MCV · MCH · MCHC</span><span class="az-pill">Neutrophile %</span><span class="az-pill">Lymphozyten %</span><span class="az-pill">Mono./Eos./Baso.</span><span class="az-pill">RDW-CV · PDW · MPV · PCT</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">ASTM → HL7 2.3 · ID-Fix aktiv</span><a class="az-btn" onclick="selectDev('sysmex_xp300');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-teal">🩵</div>
+      <div><div class="az-name">Sysmex XQ-320 <span class="tag-new">NEU</span></div><div class="az-model">Hämatologie · HL7/TCP LAN · Port 5001</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Blutbild (20 Parameter) — Nachfolger XP-300</div>
+      <div class="az-pills"><span class="az-pill">Leukozyten</span><span class="az-pill">Erythrozyten</span><span class="az-pill">Hämoglobin</span><span class="az-pill">Hämatokrit</span><span class="az-pill">Thrombozyten</span><span class="az-pill">Neutrophile %</span><span class="az-pill">Neutrophile abs.</span><span class="az-pill">Lymphozyten %</span><span class="az-pill">RDW-SD · RDW-CV</span><span class="az-pill sp">HL7 LAN nativ</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">HL7 2.3 nativ · 70 Proben/h</span><a class="az-btn" onclick="selectDev('sysmex_xq320');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-violet">🟣</div>
+      <div><div class="az-name">Sysmex pocH-100i <span class="tag-new">NEU</span></div><div class="az-model">Hämatologie POCT · ASTM/TCP · Port 5002</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Blutbild POCT (17 Parameter)</div>
+      <div class="az-pills"><span class="az-pill">Leukozyten</span><span class="az-pill">Erythrozyten</span><span class="az-pill">Hämoglobin</span><span class="az-pill">Hämatokrit</span><span class="az-pill">Thrombozyten</span><span class="az-pill">Neutrophile %</span><span class="az-pill">Neutrophile abs.</span><span class="az-pill">Lymphozyten %</span><span class="az-pill">Mischzellen %</span><span class="az-pill">RDW-CV · PDW · MPV</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">ASTM · 30 Proben/Tag · 15 µL</span><a class="az-btn" onclick="selectDev('sysmex_poch100i');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-pink">🔴</div>
+      <div><div class="az-name">Horiba Microsemi CRP <span class="tag-new">NEU</span></div><div class="az-model">CBC + CRP POCT · HL7/LAN · Port 5004</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Blutbild + CRP (20 Parameter)</div>
+      <div class="az-pills"><span class="az-pill">Leukozyten</span><span class="az-pill">Granulozyten %</span><span class="az-pill">Granulozyten abs.</span><span class="az-pill">Lymphozyten %</span><span class="az-pill">Hämoglobin</span><span class="az-pill">Hämatokrit</span><span class="az-pill">Thrombozyten</span><span class="az-pill sp">CRP (quantitativ)</span><span class="az-pill sp">GLR-Ratio</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">CBC+CRP in 4 Min · 10–18 µL</span><a class="az-btn" onclick="selectDev('horiba_microsemi');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-green">🟢</div>
+      <div><div class="az-name">Menarini UC-1000</div><div class="az-model">Urinstatus · Serial · USB</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Chemische + physikalische Parameter</div>
+      <div class="az-pills"><span class="az-pill">Glukose</span><span class="az-pill">Protein</span><span class="az-pill">Bilirubin</span><span class="az-pill">Ketone</span><span class="az-pill">Blut</span><span class="az-pill">Leukozyten</span><span class="az-pill">Nitrit</span><span class="az-pill">Urobilinogen</span><span class="az-pill">pH</span><span class="az-pill">Spez. Gewicht</span><span class="az-pill">Ascorbinsäure</span><span class="az-pill">Kreatinin</span><span class="az-pill">Albumin</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">Serial USB · HANDSHAKE</span><a class="az-btn" onclick="selectDev('uc1000');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-pink">🩷</div>
+      <div><div class="az-name">Seamaty SMT-120</div><div class="az-model">Klinische Chemie · MLLP/HL7 · Port 6000</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Leber, Niere, Stoffwechsel</div>
+      <div class="az-pills"><span class="az-pill">ALT (GPT)</span><span class="az-pill">AST (GOT)</span><span class="az-pill">Gamma-GT</span><span class="az-pill">Alk. Phosphatase</span><span class="az-pill">Bilirubin gesamt</span><span class="az-pill">Harnstoff</span><span class="az-pill">Kreatinin</span><span class="az-pill">eGFR</span><span class="az-pill">Glukose</span><span class="az-pill">Cholesterin</span><span class="az-pill">Triglyzeride</span><span class="az-pill">HDL-C</span><span class="az-pill">LDL-C</span><span class="az-pill">Harnsäure</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">HL7 nativ · MLLP · HL7 2.3</span><a class="az-btn" onclick="selectDev('seamaty_smt120');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-teal">🧪</div>
+      <div><div class="az-name">Seamaty SD1 <span class="tag-new">NEU</span></div><div class="az-model">Dry Chemistry POCT · HL7/TCP · Port 6002</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Leber, Niere, Stoffwechsel</div>
+      <div class="az-pills"><span class="az-pill">ALT (GPT)</span><span class="az-pill">AST (GOT)</span><span class="az-pill">Gamma-GT</span><span class="az-pill">Bilirubin gesamt</span><span class="az-pill">Albumin</span><span class="az-pill">Gesamtprotein</span><span class="az-pill">Harnstoff</span><span class="az-pill">Kreatinin</span><span class="az-pill">eGFR</span><span class="az-pill">Glukose</span><span class="az-pill">Cholesterin</span><span class="az-pill">Triglyzeride</span><span class="az-pill">Harnsäure</span><span class="az-pill">Amylase</span><span class="az-pill">Kalzium</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">Reagenz-Discs · 100 µL · 12 Min</span><a class="az-btn" onclick="selectDev('seamaty_sd1');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-orange">🟠</div>
+      <div><div class="az-name">Seamaty SD3 <span class="tag-new">NEU</span></div><div class="az-model">Dry Chemistry POCT · HL7/TCP · Port 6001</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">Leber, Niere, Lipide + HbA1c + CRP</div>
+      <div class="az-pills"><span class="az-pill">ALT (GPT)</span><span class="az-pill">AST (GOT)</span><span class="az-pill">Gamma-GT</span><span class="az-pill">Bilirubin gesamt</span><span class="az-pill">Harnstoff</span><span class="az-pill">Kreatinin</span><span class="az-pill">eGFR</span><span class="az-pill">Glukose</span><span class="az-pill sp">HbA1c</span><span class="az-pill">Cholesterin</span><span class="az-pill">Triglyzeride</span><span class="az-pill sp">CRP</span><span class="az-pill">Harnsäure</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">Reagenz-Discs · 60–100 µL · 9–12 Min</span><a class="az-btn" onclick="selectDev('seamaty_sd3');return false" href="#">Parametri →</a></div>
+  </div>
+
+  <div class="az-card inactive-device">
+    <div class="az-card-header">
+      <div class="az-icon az-icon-pink" style="background:rgba(255,64,96,0.08)">⚗️</div>
+      <div><div class="az-name">Roche Cobas b 101 <span class="tag-new">NEU</span></div><div class="az-model">HbA1c / Lipide / CRP POCT · USB/Serial</div></div>
+      <div class="az-status off"><span class="sdot"></span>Inattivo</div>
+    </div>
+    <div class="az-body"><div class="az-group"><div class="az-group-label">HbA1c + Lipidprofil + CRP</div>
+      <div class="az-pills"><span class="az-pill sp">HbA1c (2 µL)</span><span class="az-pill">Cholesterin gesamt</span><span class="az-pill">HDL-Cholesterin</span><span class="az-pill">LDL-Cholesterin</span><span class="az-pill">Triglyzeride</span><span class="az-pill">Nicht-HDL-Cholesterin</span><span class="az-pill sp">CRP (12 µL)</span></div>
+    </div></div>
+    <div class="az-footer"><span class="az-footer-info">POCT · Einzeltest ~6 Min · Dual ~15 Min</span><a class="az-btn" onclick="selectDev('cobas_b101');return false" href="#">Parametri →</a></div>
+  </div>
+
+</div>
+</div>
+
+<!-- TAB Parametri & Mapping -->
+<div id="tab-params" style="display:none">
+  <div class="dev-sel">
+    <span class="ds-grp">Hämatologie</span>
+    <button class="ds-btn active" id="ds-sysmex_xp300"    onclick="selectDev('sysmex_xp300')">Sysmex XP-300</button>
+    <button class="ds-btn"        id="ds-sysmex_xq320"    onclick="selectDev('sysmex_xq320')">Sysmex XQ-320</button>
+    <button class="ds-btn"        id="ds-sysmex_poch100i" onclick="selectDev('sysmex_poch100i')">pocH-100i</button>
+    <button class="ds-btn"        id="ds-horiba_microsemi" onclick="selectDev('horiba_microsemi')">Horiba Microsemi CRP</button>
+    <span class="ds-grp">Chemie</span>
+    <button class="ds-btn"        id="ds-seamaty_smt120"  onclick="selectDev('seamaty_smt120')">Seamaty SMT-120</button>
+    <button class="ds-btn"        id="ds-seamaty_sd1"     onclick="selectDev('seamaty_sd1')">Seamaty SD1</button>
+    <button class="ds-btn"        id="ds-seamaty_sd3"     onclick="selectDev('seamaty_sd3')">Seamaty SD3</button>
+    <button class="ds-btn"        id="ds-cobas_b101"      onclick="selectDev('cobas_b101')">Cobas b 101</button>
+    <button class="ds-btn"        id="ds-loc200"          onclick="selectDev('loc200')">LOC-200</button>
+    <span class="ds-grp">Urinstatus</span>
+    <button class="ds-btn"        id="ds-uc1000"          onclick="selectDev('uc1000')">UC-1000</button>
+  </div>
+  <div class="map-box"><table class="map-table" id="map-tbl"></table></div>
+</div>
+
+<!-- TAB Porte & Protocolli -->
+<div id="tab-ports" style="display:none">
+  <div class="ports-grid">
+    <div class="port-box"><div class="port-box-title">🟡 LOC-200 Analyser</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-http">HTTP / JSON</span></div>
+      <div class="port-row"><span class="pr-label">Port</span><span class="pr-val">5003</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🔵 Sysmex XP-300</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-tcp">ASTM / TCP</span></div>
+      <div class="port-row"><span class="pr-label">Listener-Port</span><span class="pr-val">5000</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🩵 Sysmex XQ-320</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-mllp">HL7 / MLLP nativ</span></div>
+      <div class="port-row"><span class="pr-label">Listener-Port</span><span class="pr-val">5001</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🟣 Sysmex pocH-100i</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-tcp">ASTM / TCP</span></div>
+      <div class="port-row"><span class="pr-label">Listener-Port</span><span class="pr-val">5002</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🔴 Horiba Microsemi CRP</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-mllp">HL7 / LAN</span></div>
+      <div class="port-row"><span class="pr-label">Listener-Port</span><span class="pr-val">5004</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🟢 Menarini UC-1000</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-serial">Serial USB</span></div>
+      <div class="port-row"><span class="pr-label">Baudrate</span><span class="pr-val">9600</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🩷 Seamaty SMT-120</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-mllp">MLLP / HL7</span></div>
+      <div class="port-row"><span class="pr-label">Listener-Port</span><span class="pr-val">6000</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🧪 Seamaty SD1</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-mllp">HL7 / TCP</span></div>
+      <div class="port-row"><span class="pr-label">Listener-Port</span><span class="pr-val">6002</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">🟠 Seamaty SD3</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-mllp">HL7 / TCP</span></div>
+      <div class="port-row"><span class="pr-label">Listener-Port</span><span class="pr-val">6001</span></div>
+    </div>
+    <div class="port-box"><div class="port-box-title">⚗️ Roche Cobas b 101</div>
+      <div class="port-row"><span class="pr-label">Protokoll</span><span class="proto proto-serial">USB Serial</span></div>
+      <div class="port-row"><span class="pr-label">Port</span><span class="pr-val">/dev/ttyACM0</span></div>
+    </div>
+  </div>
+</div>
+
+  </div>
+</details>
+
+<script>
+const MAPS={sysmex_xp300:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["NEUT#","Neutrophile abs.","10³/µL","2.0–7.0"],["LYMPH#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MXD#","Mono./Eos./Baso. abs.","10³/µL","0.2–1.0"],["NEUT%","Neutrophile %","%","40–75"],["LYMPH%","Lymphozyten %","%","20–45"],["MXD%","Mono./Eos./Baso. %","%","2–12"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt pro Erythrozyt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW-SD","Erythrozyten-Verteilungsbreite SD","fL","37–54"],["RDW-CV","Erythrozyten-Verteilungsbreite CV","%","11–16"],["PLT","Thrombozyten","10³/µL","150–400"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"],["P-LCR","Grossthrombozyten-Anteil","%","10–45"],["PCT","Thrombokrit","%","0.10–0.30"]],sysmex_xq320:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["NEUT#","Neutrophile abs.","10³/µL","2.0–7.0"],["LYMPH#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MXD#","Mono./Eos./Baso. abs.","10³/µL","0.2–1.0"],["NEUT%","Neutrophile %","%","40–75"],["LYMPH%","Lymphozyten %","%","20–45"],["MXD%","Mono./Eos./Baso. %","%","2–12"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW-SD","Erythrozyten-Verteilungsbreite SD","fL","37–54"],["RDW-CV","Erythrozyten-Verteilungsbreite CV","%","11–16"],["PLT","Thrombozyten","10³/µL","150–400"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"],["P-LCR","Grossthrombozyten-Anteil","%","10–45"],["PCT","Thrombokrit","%","0.10–0.30"]],sysmex_poch100i:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["NEUT#","Neutrophile abs.","10³/µL","2.0–7.0"],["LYMPH#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MXD#","Mischzellen abs.","10³/µL","0.2–1.0"],["NEUT%","Neutrophile %","%","40–75"],["LYMPH%","Lymphozyten %","%","20–45"],["MXD%","Mischzellen %","%","2–12"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW-CV","Erythrozyten-Verteilungsbreite CV","%","11–16"],["PLT","Thrombozyten","10³/µL","150–400"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"]],horiba_microsemi:[["WBC","Leukozyten","10³/µL","4.0–10.0"],["GRA#","Granulozyten abs.","10³/µL","2.0–7.5"],["LYM#","Lymphozyten abs.","10³/µL","1.0–4.0"],["MID#","Mittelzellen abs.","10³/µL","0.1–1.0"],["GRA%","Granulozyten %","%","43–76"],["LYM%","Lymphozyten %","%","20–45"],["MID%","Mittelzellen %","%","2–12"],["GLR","Granulozyten/Lymphozyten-Ratio","","<3.0"],["RBC","Erythrozyten","10⁶/µL","4.2–5.4"],["HGB","Hämoglobin","g/dL","12.0–16.0"],["HCT","Hämatokrit","%","36.0–46.0"],["MCV","Mittleres Erythrozyten-Volumen","fL","85–95"],["MCH","Mittlerer Hb-Gehalt","pg","27–33"],["MCHC","Mittlere Hb-Konzentration","g/dL","32–36"],["RDW","Erythrozyten-Verteilungsbreite","%","11.5–14.5"],["PLT","Thrombozyten","10³/µL","150–400"],["MPV","Mittleres Thrombozyten-Volumen","fL","7–13"],["PCT","Thrombokrit","%","0.10–0.30"],["PDW","Thrombozyten-Verteilungsbreite","fL","9–17"],["CRP","C-reaktives Protein","mg/L","<5.0"]],uc1000:[["GLU","Glukose","","negativ"],["PRO","Protein","","negativ"],["BIL","Bilirubin","","negativ"],["KET","Ketone","","negativ"],["BLO","Blut","","negativ"],["LEU","Leukozyten","","negativ"],["NIT","Nitrit","","negativ"],["URO","Urobilinogen","mg/dL","normal"],["ASC","Ascorbinsäure","","negativ"],["SG","Spezifisches Gewicht","","1.005–1.030"],["pH","pH","","5.0–8.0"],["CRE","Kreatinin","µmol/L",""],["ALB","Albumin","g/L",""],["AC","Albumin/Kreatinin-Quotient","",""],["PC","Protein/Kreatinin-Quotient","",""]],seamaty_smt120:[["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALP","Alkalische Phosphatase","U/L","50–135"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["GLU","Glukose","mmol/L","4.41–6.19"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["UA","Harnsäure","µmol/L","155–357"]],seamaty_sd1:[["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALP","Alkalische Phosphatase","U/L","50–135"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["CHE","Cholinesterase","U/L","5320–12920"],["TBA","Gallensäuren gesamt","µmol/L","0–10"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["UA","Harnsäure","µmol/L","155–357"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["GLU","Glukose","mmol/L","4.41–6.19"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["CA","Kalzium","mmol/L","2.1–2.6"],["AMY","Amylase","U/L","35–135"],["LDH","Laktat-Dehydrogenase","U/L","135–225"],["CK","Kreatinkinase gesamt","U/L","26–192"]],seamaty_sd3:[["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALP","Alkalische Phosphatase","U/L","50–135"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["GLU","Glukose","mmol/L","4.41–6.19"],["HBA1C","Glykiertes Hämoglobin (HbA1c)","%","4.0–5.6"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["UA","Harnsäure","µmol/L","155–357"],["CRP","C-reaktives Protein","mg/L","<5.0"],["CA","Kalzium","mmol/L","2.1–2.6"]],cobas_b101:[["HBA1C","HbA1c — Glykiertes Hämoglobin","%","4.0–5.6"],["TC","Cholesterin gesamt","mmol/L","0–5.18"],["HDL","HDL-Cholesterin","mmol/L","≥1.04"],["LDL","LDL-Cholesterin","mmol/L","0–3.37"],["TG","Triglyzeride","mmol/L","0–1.7"],["NHDL","Nicht-HDL-Cholesterin","mmol/L","0–4.14"],["CRP","C-reaktives Protein (quantitativ)","mg/L","<5.0"]],loc200:[["ALB","Albumin","g/L","40–55"],["TP","Gesamtprotein","g/L","65–85"],["GLOB","Globuline","g/L","20–40"],["A/G","Albumin/Globulin-Quotient","","1.0–2.0"],["ALP","Alkalische Phosphatase","U/L","50–135"],["GGT","Gamma-GT — Gamma-Glutamyltransferase","U/L","7–45"],["ALT","ALT (GPT) — Alanin-Aminotransferase","U/L","7–40"],["AST","AST (GOT) — Aspartat-Aminotransferase","U/L","13–35"],["TBIL","Bilirubin gesamt","µmol/L","0–20.5"],["UA","Harnsäure","µmol/L","155–357"],["UREA","Harnstoff","mmol/L","3.1–8.8"],["CRE","Kreatinin","µmol/L","41–81"],["eGFR","Geschätzte glomeruläre Filtrationsrate","","≥90"],["AMY","Amylase","U/L","35–135"],["GLU","Glukose","mmol/L","4.41–6.19"],["CHOL","Cholesterin gesamt","mmol/L","0–5.68"],["TG","Triglyzeride","mmol/L","0–1.7"],["HDL-C","HDL-Cholesterin","mmol/L","≥1.04"],["LDL-C","LDL-Cholesterin","mmol/L","0–3.37"]]};
+
+let cur='sysmex_xp300';
+function renderMap(d){var rows=MAPS[d];if(!rows)return;var tbl=document.getElementById('map-tbl');tbl.innerHTML='<thead><tr><th>Gerätecode</th><th>Bezeichnung (Deutsch)</th><th>Einheit</th><th>Referenzbereich</th></tr></thead>';var tb=document.createElement('tbody');rows.forEach(function(r){var tr=document.createElement('tr');tr.innerHTML='<td>'+r[0]+'</td><td>'+r[1]+'</td><td>'+(r[2]||'—')+'</td><td class="ref">'+(r[3]||'—')+'</td>';tb.appendChild(tr);});tbl.appendChild(tb);}
+function selectDev(d){cur=d;Object.keys(MAPS).forEach(function(k){var b=document.getElementById('ds-'+k);if(b)b.classList.toggle('active',k===d);});renderMap(d);showTab('params',null);}
+function showTab(n,el){['overview','params','ports'].forEach(function(t){document.getElementById('tab-'+t).style.display=(t===n)?'':'none';});document.querySelectorAll('.az-tab').forEach(function(t){t.classList.remove('active');});if(el){el.classList.add('active');}else{var m={'overview':0,'params':1,'ports':2};var tabs=document.querySelectorAll('.az-tab');if(tabs[m[n]])tabs[m[n]].classList.add('active');}if(n==='params')renderMap(cur);}
+
+// Stato automatico basato su connected (10 min) e last_seen (4 ore)
+const lastSeen = {{ last_seen | tojson }};
+const connected = {{ connected | tojson }};
+const deviceMap = {
+  'loc200':          'LOC-200',
+  'sysmex_xp300':    'Sysmex XP-300',
+  'sysmex_xq320':    'SYSMEX XQ320 Haematologie',
+  'sysmex_poch100i': 'pocH-100i',
+  'uc1000':          'UC1000 Urinstatus',
+  'seamaty_smt120':  'Seamaty SMT-120',
+  'seamaty_sd1':     'Seamaty SD1 POCT',
+  'seamaty_sd3':     'Seamaty SD3',
+  'horiba_microsemi':'HORIBA Microsemi CRP',
+  'cobas_b101':      'COBAS B101 POCT',
+};
+const now = new Date();
+document.querySelectorAll('.az-card').forEach(card => {
+  const btn = card.querySelector('.az-btn');
+  if (!btn) return;
+  const onclick = btn.getAttribute('onclick') || '';
+  const m = onclick.match(/selectDev\('([^']+)'\)/);
+  if (!m) return;
+  const devName = deviceMap[m[1]];
+  const tsConn = devName && connected[devName];
+  const tsSeen = devName && lastSeen[devName];
+  const connActive = tsConn && (now - new Date(tsConn)) < 10 * 60 * 1000;
+  const seenActive = tsSeen && (now - new Date(tsSeen)) < 4 * 3600 * 1000;
+  const isActive = connActive || seenActive;
+  const dot = card.querySelector('.sdot');
+  const txt = card.querySelector('.az-status span:last-child');
+  const statusDiv = card.querySelector('.az-status');
+  if (isActive) {
+    card.classList.remove('inactive-device'); card.classList.add('active-device');
+    if (statusDiv) { statusDiv.classList.remove('off'); statusDiv.classList.add('on'); }
+    if (dot) { dot.style.background='var(--green)'; dot.style.boxShadow='0 0 5px var(--green)'; }
+    if (txt) txt.textContent = 'Attivo';
+  } else {
+    card.classList.remove('active-device'); card.classList.add('inactive-device');
+    if (statusDiv) { statusDiv.classList.remove('on'); statusDiv.classList.add('off'); }
+    if (dot) { dot.style.background='var(--text3)'; dot.style.boxShadow='none'; }
+    if (txt) txt.textContent = 'Inattivo';
+  }
+});
+renderMap('sysmex_xp300');
+
+// ── Plug-and-play discovery ──────────────────────────────────────
+async function loadDiscovered() {
+  try {
+    const r = await fetch('/api/devices/discovered');
+    const d = await r.json();
+    renderDiscovery(d.devices || []);
+  } catch(e) {}
+}
+
+// "Scegli il tuo apparecchio" — human names → protocol. The operator picks
+// the machine; the gateway sets the right language automatically.
+// label = testo nel menu · type = protocollo · name = nome pulito che appare
+// nel gestionale (MSH-3). name vuoto = usa il default del protocollo.
+const DEVICE_MODELS = [
+  {label: '— scegli l\'apparecchio —',        type: '',                name: ''},
+  {label: 'LOC-200 (biochimica)',             type: 'loc200_serial',   name: 'LOC-200'},
+  {label: 'Menarini UC-1000 (urine)',         type: 'uc1000_serial',   name: 'Urine UC-1000'},
+  {label: 'Roche Cobas b101 (POCT)',          type: 'cobas_poct',      name: 'Cobas b101'},
+  {label: 'Roche Cobas h232 (POCT)',          type: 'cobas_poct',      name: 'Cobas h232'},
+  {label: 'Roche Reflotron',                  type: 'reflotron_serial',name: 'Reflotron'},
+  {label: 'Sysmex — ematologia (ASTM)',       type: 'sysmex_astm',     name: 'Sysmex'},
+  {label: 'Boson QDS-300B (immunofluoresc.)', type: 'sysmex_astm',     name: 'Boson QDS-300B'},
+  {label: 'Altro apparecchio HL7',            type: 'mllp_hl7',        name: ''},
+  {label: 'Altro apparecchio ASTM',           type: 'sysmex_astm',     name: ''},
+];
+
+function assignFromSelect(key, idx) {
+  const sel = document.getElementById('disc-sel-' + idx);
+  const m = sel ? DEVICE_MODELS[parseInt(sel.value, 10)] : null;
+  if (!m || !m.type) { toast('Scegli prima l\'apparecchio dal menu', 'error'); return; }
+  activateDevice(key, m.type, m.name);
+}
+
+function renderDiscovery(devices) {
+  const panel = document.getElementById('discovery-panel');
+  const list = document.getElementById('discovery-list');
+  // Panel stays visible so "Scansione USB/LAN" are always reachable.
+  panel.style.display = 'block';
+  // Show ALL connected USB ports even when the protocol wasn't recognised
+  // (confidence 0) so the operator can assign them by hand — hiding them
+  // meant a Pi with 5 analyzers showed only the one device we could
+  // fingerprint. TCP hits still need a minimum confidence to avoid noise.
+  const visible = devices.filter(x => x.source === 'usb' || x.confidence >= 40);
+  if (!visible.length) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:12px;padding:10px;font-family:var(--mono)">'
+      + 'Nessun device rilevato. Collega l\'apparecchio USB e premi &#8220;Scansione USB&#8221;.</div>';
+    return;
+  }
+  list.innerHTML = '';
+  visible.forEach((dev, idx) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;padding:10px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;flex-wrap:wrap';
+    const badge = dev.activated ? '<span class="az-pill" style="background:rgba(0,229,160,0.15);color:#00e5a0;border-color:rgba(0,229,160,0.3)">attivato</span>'
+                                : (dev.confidence >= 80 ? '<span class="az-pill sp">alta confidenza</span>'
+                                                        : '<span class="az-pill">bassa confidenza</span>');
+    // "Scegli il tuo apparecchio" — the operator picks the MACHINE by name and
+    // the protocol is set automatically, instead of typing protocol codes.
+    const guess = dev.device_type || '';
+    const opts = DEVICE_MODELS.map((m, i) =>
+      `<option value="${i}"${(m.type && m.type === guess) ? ' selected' : ''}>${m.label}</option>`).join('');
+    const assignUI = dev.activated
+      ? ''
+      : `<select id="disc-sel-${idx}" class="az-btn" style="padding:6px 8px;max-width:230px">${opts}</select>`
+        + `<button class="az-btn" onclick="assignFromSelect('${dev.source}:${dev.location}', ${idx})">Attiva</button>`;
+    row.innerHTML = `
+      <div style="flex-shrink:0;font-size:20px">${dev.source === 'usb' ? '&#128268;' : '&#127760;'}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-family:var(--mono);font-size:12px;color:var(--text)">${dev.display_name || 'device sconosciuto'}</div>
+        <div style="font-family:var(--mono);font-size:11px;color:var(--text3);margin-top:2px">
+          ${dev.location} · ${dev.protocol || '—'} · confidenza ${dev.confidence}%
+          ${dev.usb_id ? ' · USB ' + dev.usb_id : ''}
+          ${dev.chip ? ' · ' + dev.chip : ''}
+        </div>
+      </div>
+      ${badge}
+      ${assignUI}
+    `;
+    list.appendChild(row);
+  });
+}
+
+async function discoverUsb() {
+  const btn = document.getElementById('btn-discover-usb');
+  btn.disabled = true; btn.textContent = 'Scansione...';
+  try {
+    await fetch('/api/devices/discover', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
+    await loadDiscovered();
+  } catch(e) { console.error(e); }
+  btn.disabled = false; btn.textContent = 'Scansione USB';
+}
+
+async function activateDevice(key, deviceType, displayName) {
+  if (!deviceType) { toast('Scegli prima l\'apparecchio dal menu', 'error'); return; }
+  const r = await fetch('/api/devices/activate', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({key: key, device_type: deviceType, display_name: displayName || ''})
+  });
+  const d = await r.json();
+  if (d.ok) {
+    toast('Device attivato — riavvia il gateway per applicare', 'success');
+    setTimeout(loadDiscovered, 500);
+  } else {
+    toast('Attivazione fallita: ' + (d.error || 'errore'), 'error');
+  }
+}
+
+loadDiscovered();
+setInterval(loadDiscovered, 20000);
+
+// ── Add-device wizard ────────────────────────────────────────────
+function openWizard() {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+                padding:22px;max-width:500px;width:100%;color:var(--text);font-family:var(--sans)">
+      <div style="font-family:var(--display);font-weight:800;font-size:16px;margin-bottom:14px">
+        Aggiungi nuovo device
+      </div>
+      <label style="font-size:11px;color:var(--text3);text-transform:uppercase;font-family:var(--mono)">ID (kebab-case)</label>
+      <input id="w-id" placeholder="sysmex-xn550"
+             style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin:5px 0 12px">
+      <label style="font-size:11px;color:var(--text3);text-transform:uppercase;font-family:var(--mono)">Tipo protocollo</label>
+      <select id="w-type" onchange="wizToggle()"
+              style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin:5px 0 12px">
+        <option value="mllp_hl7">HL7 v2 MLLP (TCP)</option>
+        <option value="sysmex_astm">Sysmex ASTM E1381 (TCP)</option>
+        <option value="uc1000_serial">UC-1000 seriale (RS-232)</option>
+        <option value="cobas_poct">Cobas b101 POCT (USB CDC)</option>
+      </select>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+        <div><label style="font-size:11px;color:var(--text3);font-family:var(--mono)">Nome display</label>
+          <input id="w-display" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin-top:5px"></div>
+        <div><label style="font-size:11px;color:var(--text3);font-family:var(--mono)">Vendor</label>
+          <input id="w-vendor" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin-top:5px"></div>
+      </div>
+      <div id="w-net" style="margin-bottom:12px">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+          <div><label style="font-size:11px;color:var(--text3);font-family:var(--mono)">Listen host</label>
+            <input id="w-host" value="0.0.0.0" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin-top:5px"></div>
+          <div><label style="font-size:11px;color:var(--text3);font-family:var(--mono)">Port</label>
+            <input id="w-port" type="number" value="5100" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin-top:5px"></div>
+        </div>
+      </div>
+      <div id="w-serial" style="margin-bottom:12px;display:none">
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+          <div><label style="font-size:11px;color:var(--text3);font-family:var(--mono)">Serial port</label>
+            <input id="w-serialport" value="/dev/ttyUSB1" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin-top:5px"></div>
+          <div><label style="font-size:11px;color:var(--text3);font-family:var(--mono)">Baudrate</label>
+            <input id="w-baud" type="number" value="9600" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;color:var(--text);font-family:var(--mono);margin-top:5px"></div>
+        </div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;font-family:var(--mono);color:var(--text2);margin-bottom:14px">
+        <input type="checkbox" id="w-enabled"> attiva subito (default: disabilitato, verifica prima)
+      </label>
+      <div style="display:flex;justify-content:flex-end;gap:8px">
+        <button class="az-btn" onclick="this.closest('div[style*=fixed]').remove()">Annulla</button>
+        <button class="az-btn" onclick="saveWizard()" style="background:rgba(0,229,160,0.15);color:#00e5a0;border-color:rgba(0,229,160,0.4)">Salva</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+  wizToggle();
+}
+function wizToggle() {
+  const t = document.getElementById('w-type').value;
+  const isNet = (t === 'mllp_hl7' || t === 'sysmex_astm');
+  document.getElementById('w-net').style.display    = isNet ? 'block' : 'none';
+  document.getElementById('w-serial').style.display = isNet ? 'none' : 'block';
+}
+async function saveWizard() {
+  const body = {
+    id:           document.getElementById('w-id').value.trim(),
+    type:         document.getElementById('w-type').value,
+    display_name: document.getElementById('w-display').value.trim(),
+    vendor:       document.getElementById('w-vendor').value.trim(),
+    enabled:      document.getElementById('w-enabled').checked,
+    listen_host:  document.getElementById('w-host').value,
+    listen_port:  parseInt(document.getElementById('w-port').value, 10),
+    serial_port:  document.getElementById('w-serialport').value,
+    baudrate:     parseInt(document.getElementById('w-baud').value, 10),
+  };
+  try {
+    const r = await fetch('/api/devices/create', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const d = await r.json();
+    if (d.ok) {
+      toast('Device salvato: ' + d.path, 'success');
+      setTimeout(() => window.location.reload(), 1200);
+    } else {
+      toast('Errore: ' + (d.error || 'salvataggio fallito'), 'error');
+    }
+  } catch (e) { toast('errore: ' + e, 'error'); }
+}
+
+// ── Doctor notice: a USB machine was plugged in and waits for the technician ──
+(async function () {
+  try {
+    var r = await fetch('/api/devices/discovered', {credentials: 'same-origin'});
+    if (!r.ok) return;
+    var d = await r.json();
+    var p = (d.pending || []).filter(function (x) { return !x.activated; });
+    if (!p.length) return;
+    var names = p.map(function (x) { return x.display_name || x.vendor || T('dispositivo generico'); }).join(', ');
+    document.getElementById('az-usb-new-text').textContent =
+      T('{nomi}. Il tecnico deve confermarlo una volta, poi funziona da solo.', {nomi: names});
+    document.getElementById('az-usb-new').hidden = false;
+  } catch (e) {}
+})();
+</script>
+
+{% endblock %}

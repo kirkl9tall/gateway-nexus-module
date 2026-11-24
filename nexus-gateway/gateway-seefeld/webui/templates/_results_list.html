@@ -1,0 +1,36 @@
+{# List of results. Rendered by /results/list (webui/results_view.py). #}
+{% from "_ui.html" import chip %}
+{% if rows %}
+<p class="rs-count">{{ t("1 risultato") if rows|length == 1 else t("{n} risultati", n=rows|length) }}</p>
+<ul class="rs-list">
+  {% for r in rows %}
+  <li>
+    <button type="button" class="rs-item {{ r.level }}" onclick="openDetail({{ r.id }}, this)">
+      <span class="rs-when">
+        <b>{{ r.dt.strftime("%H:%M") if r.dt else "—" }}</b>
+        <small>{{ r.dt.strftime("%d.%m.%Y") if r.dt else "" }}</small>
+      </span>
+      <span class="rs-who">
+        <small>{{ t("Paziente") }}</small>
+        <b>{{ r.patient_id or r.sample_id or "—" }}</b>
+      </span>
+      <span class="rs-what">
+        <b>{{ r.device or "—" }}</b>
+        <small>{{ t("1 valore") if r.analytes == 1 else t("{n} valori", n=r.analytes) }}</small>
+      </span>
+      <span class="rs-state">
+        {% if r.level == 'good' %}{{ chip('good', t("Inviato a {dest}", dest=r.succeeded|join(', '))) }}
+        {% elif r.level == 'warning' %}{{ chip('warning', t("Inviato in parte")) }}
+        {% else %}{{ chip('critical', t("Non inviato")) }}{% endif %}
+      </span>
+      <svg class="rs-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>
+    </button>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="ov-empty">
+  {%- if period == 'today' -%}{{ t("Nessun risultato oggi. Prova «Ultimi 7 giorni».") }}
+  {%- else -%}{{ t("Nessun risultato con questi filtri.") }}{%- endif -%}
+</p>
+{% endif %}

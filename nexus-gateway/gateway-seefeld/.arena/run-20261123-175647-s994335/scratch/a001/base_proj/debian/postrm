@@ -1,0 +1,22 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    remove)
+        # Non-purge: keep config, logs, and the jerumednexus user for reinstall
+        systemctl daemon-reload || true
+        ;;
+    purge)
+        # Full removal: nuke user data too
+        rm -rf /opt/jerumednexus /var/log/jerumednexus-gateway /var/lib/jerumednexus-gateway
+        rm -f /etc/sudoers.d/jerumednexus-gateway /etc/logrotate.d/jerumednexus-gateway
+        rm -f /etc/udev/rules.d/99-jerumednexus-devices.rules
+        rm -f /etc/systemd/system/jerumednexus-gateway.service
+        rm -f /etc/systemd/system/jerumednexus-webui.service
+        rm -f /etc/systemd/system/jerumednexus-device-notify@.service
+        deluser --system jerumednexus 2>/dev/null || true
+        systemctl daemon-reload || true
+        udevadm control --reload-rules || true
+        ;;
+esac
+exit 0

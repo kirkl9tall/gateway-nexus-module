@@ -1,0 +1,10 @@
+id: afinion_2
+type: cobas_poct
+enabled: false
+display_name: "Abbott Afinion 2 (HbA1c POCT)"
+vendor: Abbott (ex Alere)
+model: Afinion 2
+serial_port: "/dev/ttyACM2"
+notes: |
+  POCT HbA1c, CRP, ACR. Diffuso in Hausarztpraxis DACH.
+  Protocollo: POCT1-A2 (compatibile con adapter cobas_poct).

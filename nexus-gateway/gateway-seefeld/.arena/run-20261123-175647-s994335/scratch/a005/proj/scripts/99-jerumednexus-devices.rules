@@ -1,0 +1,119 @@
+# /etc/udev/rules.d/99-jerumednexus-devices.rules
+#
+# JerumedNexus Gateway -- USB plug-and-play rules for laboratory devices.
+#
+# What this file does when a USB adapter is inserted:
+#   1) Creates a STABLE symlink under /dev/jerumednexus/<family>-<serial>
+#      so the gateway can bind to a predictable path even after reboot.
+#   2) Notifies the running Web UI (/api/devices/notify_added) so the
+#      dashboard tile "Device rilevati" refreshes immediately -- no wait
+#      for the 10-second background scan.
+#
+# On removal the Web UI is also notified to clear the tile.
+#
+# ─── Vendor-ID reference for common serial adapters used by analyzers ────
+#   0403:6001  FTDI FT232R (Sysmex serial docks, LOC-200 RS-232)
+#   0403:6015  FTDI FT230X
+#   0403:6010  FTDI FT2232H (dual-channel)
+#   0403:6014  FTDI FT232H
+#   0403:6011  FTDI FT4232H (quad-channel)
+#   067b:2303  Prolific PL2303 (older; LOC-200 many practices)
+#   067b:23a3  Prolific PL2303GC (2018+)
+#   067b:23b3  Prolific PL2303HXN (2020+)
+#   067b:2304  Prolific PL2303 clone
+#   1a86:7522  QinHeng CH340B
+#   1a86:7523  QinHeng CH340G / CH340C (UC-1000, cheap dongles)
+#   1a86:55d4  QinHeng CH9102
+#   10c4:ea60  Silicon Labs CP210x (Reflotron, HemoCue, Afinion)
+#   10c4:ea70  Silicon Labs CP2105 (dual)
+#   10c4:ea71  Silicon Labs CP2108 (quad)
+#
+# ─── Direct-USB analyzers (CDC-ACM, not USB-serial-dongle) ──────────────
+#   03eb:2404  Roche cobas b101 (Atmel CDC-ACM appearance)
+#   1a0a:0001  Test devices
+#
+# ────────────────────────────────────────────────────────────────────────
+
+# Helper: any tty backed by a known USB-serial vendor gets a stable symlink,
+# TAG systemd and pings the Web UI. Format: /dev/jerumednexus/<family>-<serial>
+
+# ── FTDI (all common variants) ─────────────────────────────────────────
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6001", \
+    SYMLINK+="jerumednexus/ftdi-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6010", \
+    SYMLINK+="jerumednexus/ftdi-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6011", \
+    SYMLINK+="jerumednexus/ftdi-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6014", \
+    SYMLINK+="jerumednexus/ftdi-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0403", ATTRS{idProduct}=="6015", \
+    SYMLINK+="jerumednexus/ftdi-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+# ── Prolific (all common PL2303 variants -- old and 2020+) ─────────────
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2303", \
+    SYMLINK+="jerumednexus/pl2303-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="2304", \
+    SYMLINK+="jerumednexus/pl2303-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="23a3", \
+    SYMLINK+="jerumednexus/pl2303-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="067b", ATTRS{idProduct}=="23b3", \
+    SYMLINK+="jerumednexus/pl2303-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+# ── QinHeng CH340 / CH9102 (very common on modern cheap USB-serial) ───
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7522", \
+    SYMLINK+="jerumednexus/ch340-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="7523", \
+    SYMLINK+="jerumednexus/ch340-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1a86", ATTRS{idProduct}=="55d4", \
+    SYMLINK+="jerumednexus/ch9102-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+# ── Silicon Labs CP210x (Reflotron, HemoCue, Afinion cables) ──────────
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea60", \
+    SYMLINK+="jerumednexus/cp210x-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea70", \
+    SYMLINK+="jerumednexus/cp2105-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="10c4", ATTRS{idProduct}=="ea71", \
+    SYMLINK+="jerumednexus/cp2108-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+# ── Direct-USB analyzers (CDC-ACM appearance under /dev/ttyACM*) ──────
+# Roche cobas b101 -- POCT
+SUBSYSTEM=="tty", ATTRS{idVendor}=="03eb", ATTRS{product}=="cobas b 101", \
+    SYMLINK+="jerumednexus/cobas-b101-$env{ID_SERIAL_SHORT}", \
+    TAG+="systemd", ENV{SYSTEMD_WANTS}="jerumednexus-device-notify@%k.service"
+
+# ── Notify Web UI when ANY tty appears (fallback for unknown vendors) ─
+# This catch-all makes sure devices from vendors we don't recognise still
+# show up in the dashboard "Device rilevati" tile -- the operator can then
+# assign them manually.
+ACTION=="add", SUBSYSTEM=="tty", KERNEL=="ttyUSB*|ttyACM*", \
+    RUN+="/usr/bin/curl -s --max-time 3 -X POST http://127.0.0.1:8080/api/devices/notify_added?dev=%k"
+
+# ── On removal, tell the gateway to clear the tile ────────────────────
+ACTION=="remove", SUBSYSTEM=="tty", KERNEL=="ttyUSB*|ttyACM*", \
+    RUN+="/usr/bin/curl -s --max-time 3 -X POST http://127.0.0.1:8080/api/devices/notify_removed?dev=%k"

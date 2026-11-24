@@ -1,0 +1,71 @@
+{# One result: who, what, where it was sent, and the values.
+   Rendered by /results/<id> (webui/results_view.py). #}
+{% from "_ui.html" import chip, status_icon %}
+<header class="rd-head {{ e.level }}">
+  <small>{{ t("Paziente") }}</small>
+  <h2 id="rs-panel-title">{{ e.patient_id or e.sample_id or "—" }}</h2>
+  <dl class="rd-meta">
+    <div><dt>{{ t("Apparecchio") }}</dt><dd>{{ e.device or "—" }}</dd></div>
+    <div><dt>{{ t("Ricevuto") }}</dt><dd>{{ e.dt|when if e.dt else "—" }}</dd></div>
+    {% if e.sample_id and e.sample_id != e.patient_id %}<div><dt>{{ t("Campione") }}</dt><dd>{{ e.sample_id }}</dd></div>{% endif %}
+  </dl>
+</header>
+
+<section class="rd-section">
+  <h3>{{ t("Dove è stato inviato") }}</h3>
+  <ul class="rd-dest">
+    {% for name in e.succeeded %}
+    <li class="good">{{ status_icon('good') }}<span><b>{{ name }}</b>{{ t("Ricevuto correttamente") }}</span></li>
+    {% endfor %}
+    {% for name in e.failed %}
+    <li class="critical">{{ status_icon('critical') }}<span><b>{{ name }}</b>{{ t("Non ricevuto") }}
+      {% if e.errors.get(name) %}<small class="mono">{{ e.errors.get(name) }}</small>{% endif %}</span></li>
+    {% endfor %}
+    {% if not e.succeeded and not e.failed %}
+    <li class="neutral">{{ status_icon('neutral') }}<span>{{ t("Nessun software dello studio era collegato.") }}</span></li>
+    {% endif %}
+  </ul>
+  {% if e.failed and current_role in ('operator', 'admin') and e.sample_id %}
+  <button type="button" class="btn btn-primary btn-lg" data-sample="{{ e.sample_id }}" onclick="resendResult(this.dataset.sample, this)">{{ t("Invia di nuovo") }}</button>
+  {% endif %}
+</section>
+
+<section class="rd-section">
+  <h3>{{ t("Valori") }}</h3>
+  {% if observations %}
+  <table class="rd-values">
+    <thead><tr><th>{{ t("Esame") }}</th><th>{{ t("Valore") }}</th><th>{{ t("Riferimento") }}</th></tr></thead>
+    <tbody>
+    {% for o in observations %}
+      {% set lv = o|value_level %}
+      <tr class="{{ lv }}">
+        <td><b>{{ o.name_de or o.analyte }}</b><small>{{ o.analyte }}</small></td>
+        <td class="rd-val">
+          <b>{{ o.value }}</b> <span>{{ o.unit or "" }}</span>
+          {% if lv == 'high' %}<em class="rd-flag high">↑ {{ t("alto") }}</em>{% elif lv == 'low' %}<em class="rd-flag low">↓ {{ t("basso") }}</em>{% endif %}
+        </td>
+        <td class="rd-ref">
+          {%- if o.ref_low is not none and o.ref_high is not none -%}{{ o.ref_low }} – {{ o.ref_high }}
+          {%- elif o.ref_high is not none -%}≤ {{ o.ref_high }}
+          {%- elif o.ref_low is not none -%}≥ {{ o.ref_low }}
+          {%- else -%}—{%- endif -%}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <p class="rd-note">{{ t("Valori inviati così come li ha misurati l'apparecchio: il gateway non li modifica.") }}</p>
+  {% else %}
+  <p class="ov-empty">{{ t("I valori di questo risultato non sono stati salvati.") }}</p>
+  {% endif %}
+</section>
+
+{% if current_role == 'admin' and e.hl7 %}
+<details class="tech-zone rd-tech">
+  <summary>{{ t("Dettagli per il tecnico") }} <small>{{ t("messaggio inviato") }}</small></summary>
+  <div class="tech-zone-body">
+    <p class="rd-note mono">MSH-10: {{ e.control_id or "—" }}</p>
+    <pre class="rd-hl7">{{ e.hl7|replace("\r", "\n") }}</pre>
+  </div>
+</details>
+{% endif %}

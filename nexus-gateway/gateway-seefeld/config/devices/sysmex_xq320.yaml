@@ -1,0 +1,38 @@
+id: sysmex_xq320
+type: sysmex_astm
+enabled: false
+display_name: "Sysmex XQ-320 Hämatologie"
+vendor: Sysmex
+model: XQ-320
+listen_host: "0.0.0.0"
+listen_port: 5006
+strip_id_suffix: true
+
+# ── Protocollo TCP/IP (vedi XQ-Series ASTM Host Interface Specifications v1.4 §6.4) ──
+# Il tecnico Sysmex deve impostare l'IPU su "XR-Series ASTM1381-02/ASTM1394-97"
+# con ACK/NAK. In questa modalità:
+#   - Establishment: peer manda ENQ → gateway risponde ACK
+#   - Transfer:      [STX][F#][Text][ETX][CHK1][CHK2][CR][LF] → gateway ACK/NAK
+#   - Termination:   peer manda EOT
+#   - Checksum:      sum(byte da F# incluso a ETX/ETB incluso) mod 256, hex 2 char
+#   - Timeout:       15s establishment, 15s per frame, 30s receiver
+# Se il tecnico invece imposta "ASTM1381-95", cambiare in astm_mode: "1381-95"
+# (record raw H|... Q|... L| terminati da CR, senza ENQ/ACK/EOT).
+astm_mode: "1381-02"
+# unidirectional=true: la praxis fa solo PUSH dei risultati verso il gestionale,
+# non scarica ordini. Così il gateway NON prova a rispondere alle query (evita
+# il messaggio "TCP/IP kann nicht hergestellt werden" sul Sysmex). Imposta anche
+# il Sysmex in "solo invio / einseitig" per togliere del tutto il messaggio.
+unidirectional: true
+idle_timeout_seconds: 300      # tiene la sessione TCP aperta per 5 minuti idle
+read_timeout_seconds: 15       # per-frame timeout come da spec Sysmex
+
+notes: |
+  VERIFIED-PROD in 3 praxis DACH.
+  Log tipico praxis 2 (loc200-connect02):
+    "Connection from ('192.168.0.187', 50806)" → "Aspetto ENQ" → "No data"
+  Cause possibili:
+    1. IPU impostata su E1381-95 → usa astm_mode: "1381-95"
+    2. Timing "batch" invece di "real-time" → cambiare in IPU
+    3. Nessuna analisi completata da mandare in sospeso
+  Fonte: XQ-Series ASTM Host Interface Spec v1.4 (R320081), §6.4.

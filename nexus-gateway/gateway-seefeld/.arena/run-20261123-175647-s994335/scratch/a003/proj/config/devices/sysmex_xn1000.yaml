@@ -1,0 +1,11 @@
+id: sysmex_xn1000
+type: sysmex_astm
+enabled: false
+display_name: "Sysmex XN-1000 Hämatologie"
+vendor: Sysmex
+model: XN-1000
+listen_host: "0.0.0.0"
+listen_port: 5012
+strip_id_suffix: true
+notes: |
+  Serie XN-Modular alto volume. Comune in ospedali svizzeri.

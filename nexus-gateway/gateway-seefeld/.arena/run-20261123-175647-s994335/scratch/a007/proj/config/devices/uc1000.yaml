@@ -1,0 +1,8 @@
+id: uc1000
+type: uc1000_serial
+enabled: false
+display_name: Menarini UC-1000 Urinstatus
+vendor: Menarini
+model: UC-1000
+serial_port: /dev/ttyUSB1
+baudrate: 9600

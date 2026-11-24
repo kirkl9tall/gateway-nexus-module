@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  # Prima girava solo su main e develop, dove non si lavora mai: i workflow
+  # non sono mai partiti. Ora ogni ramo spinto viene verificato, che e' il
+  # punto di avere una CI.
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test (Python ${{ matrix.python }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ["3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      # Il controllo completo di ruff segnalava 1133 violazioni, quasi tutte
+      # stilistiche (List -> list, import locali deliberati): un cancello
+      # sempre rosso non ferma nessuna regressione, la si impara a ignorare.
+      # Qui passano solo le regole che trovano difetti veri -- nomi non
+      # definiti, variabili morte, I/O bloccante dentro funzioni async.
+      # Una di queste ha gia' scovato un NameError latente e un codice
+      # d'errore dell'analizzatore che veniva buttato via.
+      - name: Ruff -- regole che trovano difetti
+        run: |
+          ruff check src/ webui/ config/ tools/ tests/ scripts/ --select F,E4,E7,E9,B,PLE,ASYNC --ignore E701,E702,E741,E402
+
+      # Lo stile resta visibile ma non blocca: serve a sapere dove si sta
+      # accumulando debito, non a fermare un rilascio.
+      - name: Ruff -- stile (non blocca)
+        run: ruff check src/ webui/ config/ tools/ tests/ scripts/ --statistics
+        continue-on-error: true
+
+      - name: pytest
+        run: pytest --cov=src --cov-report=xml --cov-report=term
+
+      - name: Upload coverage
+        if: matrix.python == '3.12'
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+
+  security-scan:
+    name: Security scan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install pip-audit + bandit
+        run: pip install pip-audit bandit
+
+      - name: pip-audit (dependencies)
+        run: pip-audit --requirement requirements.txt --strict
+        continue-on-error: true
+
+      - name: Bandit (source)
+        run: bandit -r src/ webui/ -ll -c pyproject.toml
+        continue-on-error: true

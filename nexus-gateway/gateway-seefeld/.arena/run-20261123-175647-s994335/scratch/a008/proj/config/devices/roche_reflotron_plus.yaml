@@ -1,0 +1,17 @@
+id: roche_reflotron_plus
+type: reflotron_serial
+enabled: false
+display_name: "Roche Reflotron Plus (Dry Chemistry)"
+vendor: Roche
+model: Reflotron Plus
+serial_port: "/dev/ttyUSB4"
+baudrate: 9600
+notes: |
+  Chimica clinica a secco, 17 analiti (glucosio, colesterolo, GGT, ecc.).
+  Diffuso nelle piccole praxis DACH.
+  Protocollo verificato (docs/devices/RESEARCH.md):
+    - RS-232 9600 (o 4800) 8-N-1
+    - ASCII, semicolon-separated, un record per riga
+    - Frame: date;time;patient_id;test_code;value;unit;flag<CR><LF>
+  Il nostro adapter reflotron_serial raggruppa piu' righe con stesso
+  (date,time,patient_id) e flush dopo 3s idle.

@@ -1,0 +1,12 @@
+id: seamaty_sd3
+type: mllp_hl7
+enabled: false
+display_name: "Seamaty SD3 Chemie POCT"
+vendor: Seamaty
+model: SD3
+listen_host: "0.0.0.0"
+listen_port: 6002
+notes: >
+  Seamaty SD3 dry-chemistry POCT analyzer (evoluzione del SD1, throughput maggiore).
+  HL7 v2 over MLLP (TCP). Configurare sul menu del device:
+  LIS Interface -> HL7, indirizzo del Pi, porta 6002.

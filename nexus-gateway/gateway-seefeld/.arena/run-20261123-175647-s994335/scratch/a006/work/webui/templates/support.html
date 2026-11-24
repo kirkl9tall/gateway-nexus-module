@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Assistenza — JerumedNexus{% endblock %}
+{% block page_title %}Richiesta Assistenza{% endblock %}
+{% block content %}
+<div id="alert-area"></div>
+
+{% if ticket_number %}
+<div class="card" style="text-align:center;padding:40px;">
+  <div style="font-size:3rem;margin-bottom:16px;">✅</div>
+  <div style="font-size:1.4rem;font-weight:700;color:var(--green);margin-bottom:8px;">Richiesta inviata!</div>
+  <div style="font-size:0.9rem;color:var(--text2);margin-bottom:24px;">Il tuo numero ticket è:</div>
+  <div style="font-size:2.5rem;font-weight:800;font-family:var(--mono);color:var(--accent);letter-spacing:0.1em;">
+    {{ ticket_number }}
+  </div>
+  <div style="font-size:0.8rem;color:var(--text3);margin-top:16px;">
+    Conserva questo numero per seguire lo stato della richiesta.<br>
+    Sarete contattati da Jerumed Nexus al numero o email forniti.
+  </div>
+  <a href="/support" class="btn btn-ghost" style="margin-top:24px;">Nuova richiesta</a>
+</div>
+{% else %}
+<div class="card">
+  <div class="card-header">
+    <div class="card-title">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+      Compila il modulo di assistenza
+    </div>
+  </div>
+  <form method="POST" style="max-width:500px;">
+    <input type="hidden" name="_csrf" value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label class="form-label">Nome medico / responsabile *</label>
+      <input class="form-control" type="text" name="nome" required placeholder="Dr. Mario Rossi">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Nome clinica / studio *</label>
+      <input class="form-control" type="text" name="clinica" required placeholder="Studio Medico Altstetten">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Telefono *</label>
+      <input class="form-control" type="tel" name="telefono" required placeholder="+41 xx xxx xx xx">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Email (opzionale)</label>
+      <input class="form-control" type="email" name="email" placeholder="medico@studio.ch">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Descrizione del problema *</label>
+      <textarea class="form-control" name="problema" required rows="5" placeholder="Descrivi il problema nel dettaglio..."></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary" style="margin-top:8px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Invia richiesta
+    </button>
+  </form>
+</div>
+{% endif %}
+
+{% if tickets %}
+<div class="card" style="margin-top:20px;">
+  <div class="card-header">
+    <div class="card-title">Ticket recenti</div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:0.82rem;">
+    <thead>
+      <tr style="color:var(--text3);border-bottom:1px solid var(--border);">
+        <th style="padding:8px;text-align:left;">Ticket</th>
+        <th style="padding:8px;text-align:left;">Data</th>
+        <th style="padding:8px;text-align:left;">Nome</th>
+        <th style="padding:8px;text-align:left;">Clinica</th>
+        <th style="padding:8px;text-align:left;">Problema</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for t in tickets %}
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:8px;font-family:var(--mono);color:var(--accent);">{{ t.ticket }}</td>
+        <td style="padding:8px;color:var(--text2);">{{ t.data }}</td>
+        <td style="padding:8px;">{{ t.nome }}</td>
+        <td style="padding:8px;">{{ t.clinica }}</td>
+        <td style="padding:8px;color:var(--text2);">{{ t.problema[:60] }}{% if t.problema|length > 60 %}…{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,15 @@
+id: sysmex_uf1000i
+type: sysmex_astm
+enabled: true
+display_name: Sysmex UF-1000i Urin-Sediment
+vendor: Sysmex
+model: UF-1000i
+listen_host: 0.0.0.0
+listen_port: 5010
+astm_mode: 1381-02
+unidirectional: false
+notes: 'Sysmex UF-1000i urine sediment analyzer (fluorescent flow cytometry). ASTM
+  E1381-02 over TCP. Configurare sul menu Service -> Host Communication: IP del Pi,
+  porta 5010, ASTM E1381-02 con ACK/NAK.
+
+  '

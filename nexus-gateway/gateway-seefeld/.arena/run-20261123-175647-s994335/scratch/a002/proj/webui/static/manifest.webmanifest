@@ -1,0 +1,21 @@
+{
+  "name": "JerumedNexus Gateway",
+  "short_name": "JerumedNexus",
+  "description": "HL7 v2.5 / FHIR R4 gateway for laboratory analyzers",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "theme_color": "#0891b2",
+  "background_color": "#0f172a",
+  "icons": [
+    { "src": "/static/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Dashboard",        "url": "/",         "icons": [{"src":"/static/logo.png","sizes":"96x96"}] },
+    { "name": "Frame Inspector",  "url": "/inspect",  "icons": [{"src":"/static/logo.png","sizes":"96x96"}] },
+    { "name": "DLQ",              "url": "/dlq",      "icons": [{"src":"/static/logo.png","sizes":"96x96"}] }
+  ],
+  "categories": ["medical", "productivity"]
+}

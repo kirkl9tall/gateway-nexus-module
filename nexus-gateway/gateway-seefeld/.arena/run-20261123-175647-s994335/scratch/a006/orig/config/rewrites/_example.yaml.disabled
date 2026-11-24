@@ -1,0 +1,32 @@
+# Example per-target rewriting rules for JerumedNexus Gateway.
+#
+# Rename this file to <target-name>.yaml (e.g. vitomed.yaml) to activate.
+# The file must be a YAML list. Each rule is applied in order to every
+# segment listed in `apply_to`.
+
+# 1. Strip a title prefix from the patient name (PID-5)
+- name: "strip Dr. prefix"
+  apply_to: [PID]
+  field: 5
+  match: "^Dr\\.\\s+"
+  replace: ""
+
+# 2. Force MSH-4 to a specific facility code required by this PIS vendor
+- name: "override sending_facility for this target"
+  apply_to: [MSH]
+  field: 4
+  set: "PRAXIS_XYZ_LAB1"
+
+# 3. Strip everything after the first "/" in the OBX-6 unit field
+- name: "clean unit qualifier"
+  apply_to: [OBX]
+  field: 6
+  component: 1
+  match: "^(.*?)\\s*/.*$"
+  replace: "\\1"
+
+# 4. Remove PV1 entirely if the LIS chokes on it
+# - name: "drop PV1"
+#   apply_to: [PV1]
+#   field: 0
+#   remove: true

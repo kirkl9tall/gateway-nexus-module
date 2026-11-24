@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Time-travel Wire Replay{% endblock %}
+{% block content %}
+<style>
+  .replay-list { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  .replay-list th, .replay-list td { padding: 8px 12px; border-bottom: 1px solid #e2e8f0; font-size: 0.88rem; text-align: left; }
+  .replay-list th { background: #f8fafc; }
+  .replay-btn { padding: 4px 12px; background: #0891b2; color: #fff; border: none; border-radius: 4px; cursor: pointer; font-size: 0.8rem; }
+  .replay-result { margin-top: 20px; background: #0f172a; color: #f1f5f9; padding: 16px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; white-space: pre-wrap; max-height: 500px; overflow: auto; }
+  .step { border-left: 3px solid #06b6d4; padding-left: 10px; margin: 8px 0; }
+  .step-label { color: #06b6d4; font-weight: 600; }
+</style>
+
+<h1>Time-travel Wire Replay</h1>
+<p style="color:#64748b;font-size:0.9rem;">Ri-esegui un frame catturato dal wire senza toccare la produzione.</p>
+
+<table class="replay-list">
+  <thead>
+    <tr>
+      <th>Timestamp</th>
+      <th>Device</th>
+      <th>Size</th>
+      <th>Filename</th>
+      <th>Azione</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for c in captures %}
+      <tr>
+        <td>{{ c.ts|int }}</td>
+        <td>{{ c.device }}</td>
+        <td>{{ c.size }} bytes</td>
+        <td style="font-family:monospace;font-size:0.8rem;">{{ c.filename }}</td>
+        <td><button class="replay-btn" onclick="doReplay('{{ c.filename }}')">▶ Replay sandbox</button></td>
+      </tr>
+    {% else %}
+      <tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;">Nessuna capture in <code>logs/trace/</code></td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<div id="result" class="replay-result" style="display:none;"></div>
+
+<script>
+async function doReplay(fname) {
+  const el = document.getElementById('result');
+  el.style.display = 'block';
+  el.textContent = 'Replay in corso…';
+  const r = await fetch('/api/replay/' + encodeURIComponent(fname), {method: 'POST'});
+  const d = await r.json();
+  if (!d.ok) { el.textContent = 'Errore: ' + d.error; return; }
+  let out = '=== TIME-TRAVEL REPLAY ===\n\n';
+  for (const s of d.steps) {
+    out += `\n[Step ${s.step}] ${s.label}\n`;
+    for (const [k,v] of Object.entries(s)) {
+      if (k === 'step' || k === 'label') continue;
+      out += `  ${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}\n`;
+    }
+  }
+  if (d.hl7_out) out += '\n\n=== HL7 GENERATED ===\n' + d.hl7_out.replace(/\r/g,'\n');
+  el.textContent = out;
+}
+</script>
+{% endblock %}

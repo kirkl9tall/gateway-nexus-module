@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Verifica impianto") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+{% block content %}
+
+<style>
+.ck-intro { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; margin-bottom: 24px; }
+.ck-intro p { color: var(--ink-2); max-width: 60ch; }
+.vf-riga { display: grid; grid-template-columns: 12px 1fr; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--line); align-items: start; }
+.vf-spia { width: 12px; height: 12px; margin-top: 7px; border-radius: 50%; }
+.vf-nome { font-weight: 700; }
+.vf-dettaglio { color: var(--ink-2); margin-top: 3px; }
+.vf-rimedio { margin-top: 8px; padding: 8px 12px; background: var(--page); border-radius: 8px; font-family: var(--mono); font-size: 0.85rem; }
+</style>
+
+<div class="ck-intro">
+  <div>
+    <h1 class="page-h1" style="margin-bottom:6px;">{{ t("Verifica impianto") }}</h1>
+    <p>{{ t("Controlla in pochi secondi tutta la strada dei risultati: gateway, apparecchi, software dello studio e spazio.") }}</p>
+  </div>
+  <button class="btn btn-primary btn-lg" id="vf-avvia" onclick="eseguiVerifica()">{{ t("Controlla adesso") }}</button>
+</div>
+
+<div id="ck-result">
+  <p class="ov-empty">{{ t("Premi «Controlla adesso». Non cambia niente: guarda soltanto.") }}</p>
+</div>
+
+{# ── For the technician: the raw checks, as before. Bottom, closed. ── #}
+<details class="tech-zone tech-only" id="tech-zone">
+  <summary>{{ t("Dettagli per il tecnico") }} <small>{{ t("ogni controllo con il comando da eseguire") }}</small></summary>
+  <div class="tech-zone-body card" id="vf-risultati">
+    <p style="color:var(--ink-3);">{{ t("Esegui il controllo per vedere i dettagli.") }}</p>
+  </div>
+</details>
+
+<script>
+var COLORE = {ok: 'var(--good)', attenzione: 'var(--warn-fill)', guasto: 'var(--crit)', ignoto: 'var(--neutral)'};
+
+function _el(tag, cls, testo) {
+  var e = document.createElement(tag);
+  if (cls) e.className = cls;
+  // Always textContent: details contain paths and names from the config.
+  if (testo !== undefined) e.textContent = testo;
+  return e;
+}
+
+async function eseguiVerifica() {
+  var btn = document.getElementById('vf-avvia');
+  var box = document.getElementById('ck-result');
+  btn.disabled = true;
+  box.innerHTML = '';
+  var run = _el('div', 'ck-running');
+  run.append(_el('span', 'ck-spinner'), _el('span', null, T('Controllo in corso… ci vogliono pochi secondi.')));
+  box.append(run);
+  try {
+    var r = await fetch('/api/verifica', {method: 'POST'});
+    var d = await r.json();
+    if (!d.ok) throw new Error(d.error || T('operazione non riuscita'));
+    box.innerHTML = d.html;           // rendered and translated by the server
+    mostraDettagli(d);
+  } catch (e) {
+    box.innerHTML = '';
+    box.append(_el('p', 'ov-empty', T('Non è stato possibile eseguire il controllo: {msg}', {msg: e.message})));
+  } finally {
+    btn.disabled = false;
+    btn.textContent = T('Controlla di nuovo');
+  }
+}
+
+// Technician list: unchanged technical wording (Italian), worst first.
+function mostraDettagli(d) {
+  var box = document.getElementById('vf-risultati');
+  box.replaceChildren();
+  var ordine = {guasto: 0, attenzione: 1, ignoto: 2, ok: 3};
+  (d.esiti || []).slice().sort(function (a, b) {
+    return ((a.stato in ordine) ? ordine[a.stato] : 9) - ((b.stato in ordine) ? ordine[b.stato] : 9);
+  }).forEach(function (e) {
+    var riga = _el('div', 'vf-riga');
+    var spia = _el('i', 'vf-spia');
+    spia.style.background = COLORE[e.stato] || 'var(--neutral)';
+    var corpo = _el('div');
+    corpo.append(_el('div', 'vf-nome', e.nome));
+    if (e.dettaglio) corpo.append(_el('div', 'vf-dettaglio', e.dettaglio));
+    if (e.rimedio && e.stato !== 'ok') corpo.append(_el('div', 'vf-rimedio', e.rimedio));
+    riga.append(spia, corpo);
+    box.append(riga);
+  });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="{{ current_lang() }}">
+<head>
+<meta charset="utf-8">
+<title>{{ t("Configurazione guidata — passo {step} di {total}", step=step, total=total) }}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;700&family=Barlow+Condensed:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f2f2f3;
+  --card-bg: #f2f2f3;
+  --card-side: #e9e9ea;
+  --border: #cfd0d3;
+  --primary: #4f7599;
+  --primary-hover: #416180;
+  --text: #1d1f20;
+  --muted: #66686c;
+  --success: #4f7599;
+  --error: #a63b35;
+  --warning: #9a6410;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: 'Barlow', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  margin: 0;
+  min-height: 100vh;
+}
+.wizard {
+  max-width: 1240px;
+  margin: 32px auto;
+  padding: 0 24px;
+}
+.wizard-header {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.wizard-header h1 {
+  margin: 0 0 8px;
+  font-size: 1.8rem;
+  color: var(--primary);
+}
+.wizard-header .subtitle {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+.progress {
+  display: flex;
+  gap: 0;
+  margin: 24px 0 32px;
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--border);
+}
+.progress-step {
+  flex: 1;
+  padding: 10px 8px;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--muted);
+  background: var(--card-bg);
+  border-right: 1px solid var(--border);
+  position: relative;
+}
+.progress-step:last-child { border-right: none; }
+.progress-step.active {
+  background: var(--primary);
+  color: #fff;
+  font-weight: 600;
+}
+.progress-step.done {
+  background: var(--success);
+  color: #fff;
+}
+.progress-step.done::after {
+  content: "";
+}
+.layout {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .layout { grid-template-columns: 1fr; }
+  .wizard { margin: 12px auto; padding: 0 12px; }
+  .card, .side { padding: 18px; }
+  .wizard-header h1 { font-size: 1.35rem; }
+  .progress-step { font-size: 0.7rem; padding: 6px 4px; }
+  .progress-step { display: none; }
+  .progress-step.active { display: block; }
+  .actions { flex-direction: column-reverse; gap: 8px; }
+  .actions .btn { width: 100%; justify-content: center; }
+}
+@media (max-width: 480px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 28px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+.card h2 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+}
+.card .intro {
+  color: var(--muted);
+  margin: 0 0 24px;
+  font-size: 0.95rem;
+  line-height: 1.5;
+}
+.side {
+  background: var(--card-side);
+  border: 1px solid var(--border);
+  border-radius: 0;
+  padding: 24px;
+}
+.side h3 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.side p, .side li {
+  font-size: 0.9rem;
+  color: #334155;
+  line-height: 1.55;
+}
+.side ol, .side ul {
+  padding-left: 20px;
+  margin: 10px 0;
+}
+.side .callout {
+  background: #fef3c7;
+  border-left: 4px solid var(--warning);
+  padding: 10px 14px;
+  border-radius: 0;
+  margin: 14px 0;
+  font-size: 0.85rem;
+}
+.side .callout.error {
+  background: #fee2e2;
+  border-left-color: var(--error);
+}
+.side kbd {
+  background: #e2e8f0;
+  border-radius: 0;
+  padding: 1px 6px;
+  font-family: monospace;
+  font-size: 0.85em;
+}
+label {
+  display: block;
+  margin: 16px 0 6px;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+label small { font-weight: 400; color: var(--muted); }
+input[type="text"], input[type="password"], input[type="number"],
+input[type="email"], select, textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 0;
+  font-size: 0.95rem;
+  background: var(--card-bg);
+  font-family: inherit;
+}
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(8,145,178,0.15);
+}
+select { cursor: pointer; }
+.hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.actions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid var(--border);
+}
+.btn {
+  padding: 10px 20px;
+  border-radius: 0;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: background 0.15s;
+}
+.btn-primary {
+  background: var(--primary);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--primary-hover); }
+.btn-secondary {
+  background: var(--card-bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn-secondary:hover { background: #f1f5f9; }
+.btn-test {
+  background: #f0f9ff;
+  color: var(--primary);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+.btn-test:hover { background: #e0f2fe; }
+.error-msg {
+  background: #fee2e2;
+  color: var(--error);
+  border: 1px solid #fecaca;
+  padding: 10px 14px;
+  border-radius: 0;
+  margin-bottom: 16px;
+  font-size: 0.9rem;
+}
+.success-msg {
+  background: #dcfce7;
+  color: var(--success);
+  border: 1px solid #bbf7d0;
+  padding: 10px 14px;
+  border-radius: 0;
+  margin: 8px 0;
+  font-size: 0.9rem;
+}
+.test-result {
+  margin-top: 8px;
+  padding: 8px 12px;
+  border-radius: 0;
+  font-size: 0.85rem;
+  display: none;
+}
+.test-result.ok {
+  background: #dcfce7;
+  color: var(--success);
+  display: block;
+}
+.test-result.fail {
+  background: #fee2e2;
+  color: var(--error);
+  display: block;
+}
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-weight: bold;
+  margin-right: 8px;
+}
+/* Industry look */
+h1, h2, h3, .wizard-header h1 { font-family: 'Barlow Condensed', system-ui, sans-serif; font-weight: 600; }
+.wizard-header h1 { color: var(--text) !important; font-size: 2.2rem !important; }
+.progress { border: 1px solid var(--border); background: transparent !important; }
+.progress-step.done { background: rgba(89,128,166,0.12) !important; color: #416180 !important; }
+.card { box-shadow: none !important; }
+.side { border: 0 !important; border-left: 2px solid var(--primary) !important; background: transparent !important; }
+input, select, textarea { border-radius: 0 !important; }
+</style>
+{% include "_i18n_head.html" %}
+</head>
+<body>
+<div class="wizard">
+  <div class="wizard-header">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;">
+      <h1>JerumedNexus Gateway — {{ t("Configurazione guidata") }}</h1>
+      {% include "_lang_select.html" %}
+    </div>
+    <div class="subtitle">{{ t("Passo {step} di {total}", step=step, total=total) }}</div>
+  </div>
+
+  <div class="progress">
+    {% for i in range(1, total+1) %}
+      <div class="progress-step {% if i == step %}active{% elif i < step %}done{% endif %}">
+        {{ i }}. {{ t(["Studio","Amministratore","Rete","Analizzatore","Gestionale","Backup","Verifica"][i-1]) }}
+      </div>
+    {% endfor %}
+  </div>
+
+  <div class="layout">
+    <div class="card">
+      {% block form %}{% endblock %}
+    </div>
+    <div class="side">
+      {% block help %}{% endblock %}
+    </div>
+  </div>
+</div>
+
+<script>
+async function testTcp(host, port, resultElId) {
+  const el = document.getElementById(resultElId);
+  el.className = 'test-result';
+  el.textContent = T('Test in corso…');
+  el.style.display = 'block';
+  try {
+    const r = await fetch('/wizard/test/tcp', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({host, port})
+    });
+    const d = await r.json();
+    el.className = 'test-result ' + (d.ok ? 'ok' : 'fail');
+    el.textContent = (d.ok ? '✓ ' : '✗ ') + d.message;
+  } catch (e) {
+    el.className = 'test-result fail';
+    el.textContent = '✗ ' + T('Errore: {msg}', {msg: e.message});
+  }
+}
+</script>
+</body>
+</html>

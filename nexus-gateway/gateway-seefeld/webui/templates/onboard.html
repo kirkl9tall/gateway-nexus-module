@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<title>Onboarding — {{ device_id }}</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+  body { font-family: -apple-system,Roboto,sans-serif; background: #f8fafc; margin: 0; padding: 20px; }
+  .card { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 12px; padding: 32px;
+           box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+  h1 { color: #0891b2; margin: 0 0 8px; font-size: 1.5rem; }
+  .device-id { font-family: monospace; background: #f0f9ff; padding: 8px 12px; border-radius: 6px; display: inline-block; }
+  .status { padding: 12px; margin: 20px 0; border-radius: 8px; font-size: 0.95rem; }
+  .status.ok { background: #dcfce7; color: #166534; }
+  .status.wait { background: #fef3c7; color: #92400e; }
+  .status.err { background: #fee2e2; color: #991b1b; }
+  .step { padding: 12px 16px; margin: 8px 0; background: #f8fafc; border-left: 3px solid #0891b2; border-radius: 4px; font-size: 0.9rem; }
+  button { width: 100%; padding: 12px; background: #0891b2; color: #fff; border: none; border-radius: 8px; font-size: 1rem; cursor: pointer; margin-top: 12px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>📱 Device Onboarding</h1>
+  <div class="device-id">{{ device_id }}</div>
+
+  <div class="status {% if status == 'connected' %}ok{% elif status == 'offline' %}err{% else %}wait{% endif %}" id="status">
+    {% if status == 'connected' %}✓ Device connesso — funzionante
+    {% elif status == 'offline' %}✗ Non connesso — verificare cavo e IP
+    {% else %}⏳ In attesa del primo frame…{% endif %}
+  </div>
+
+  <h3 style="margin-top:24px;">Prossimi passi</h3>
+  <div class="step">1. Sull'analizzatore: <b>Setup → Host → IP del Pi + porta</b></div>
+  <div class="step">2. Fai un test QC sul device</div>
+  <div class="step">3. Aspetta ~30 secondi e ricarica questa pagina</div>
+
+  <button onclick="location.reload()">🔄 Ricarica stato</button>
+
+  <div style="margin-top:24px;font-size:0.8rem;color:#666;text-align:center;">
+    JerumedNexus Gateway · <a href="/" style="color:#0891b2;">Pannello completo →</a>
+  </div>
+</div>
+</body>
+</html>

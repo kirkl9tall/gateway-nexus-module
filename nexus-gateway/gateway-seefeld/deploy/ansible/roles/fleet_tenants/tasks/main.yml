@@ -1,0 +1,58 @@
+---
+# Fleet-mode role — configures N tenants on a single Pi
+- name: Ensure tenants root dirs exist
+  file:
+    path: "{{ item }}"
+    state: directory
+    owner: jerumednexus
+    group: jerumednexus
+    mode: '0750'
+  loop:
+    - /opt/jerumednexus/config/tenants
+    - /opt/jerumednexus/logs/tenants
+
+- name: Create per-tenant directories
+  file:
+    path: "{{ item.1.path }}"
+    state: directory
+    owner: jerumednexus
+    group: jerumednexus
+    mode: '0750'
+  loop: "{{ tenants | subelements('paths', {'skip_missing': true}) }}"
+
+- name: Deploy per-tenant gateway.yaml
+  template:
+    src: "tenant_gateway.yaml.j2"
+    dest: "/opt/jerumednexus/config/tenants/{{ item.id }}/gateway.yaml"
+    owner: jerumednexus
+    group: jerumednexus
+    mode: '0640'
+  loop: "{{ tenants }}"
+
+- name: Merge fleet_mode block into main gateway.yaml
+  blockinfile:
+    path: /opt/jerumednexus/config/gateway.yaml
+    block: |
+      fleet_mode:
+        enabled: true
+        tenants:
+      {% for t in tenants %}
+          - {id: "{{ t.id }}", name: "{{ t.name }}"}
+      {% endfor %}
+    marker: "# {mark} FLEET MODE MANAGED BY ANSIBLE"
+
+- name: Restart gateway
+  systemd:
+    name: jerumednexus-gateway
+    state: restarted
+    daemon_reload: true
+
+- name: Wait for each tenant panel to respond
+  uri:
+    url: "http://127.0.0.1:8088/t/{{ item.id }}/livez"
+    status_code: 200
+  register: readyz
+  retries: 20
+  delay: 2
+  until: readyz.status == 200
+  loop: "{{ tenants }}"

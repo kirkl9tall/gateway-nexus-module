@@ -1,0 +1,11 @@
+id: beckman_au480
+type: mllp_hl7
+enabled: false
+display_name: "Beckman Coulter AU480 (Chimica)"
+vendor: Beckman Coulter
+model: AU480
+listen_host: "0.0.0.0"
+listen_port: 5090
+notes: |
+  Chimica clinica automatica media capacità. Diffuso in laboratori regionali.
+  Protocollo: HL7 v2 MLLP tramite RemisolAdvance.

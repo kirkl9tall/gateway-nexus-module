@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}Fleet Console — JerumedNexus{% endblock %}
+{% block content %}
+<style>
+  .fleet-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; margin: 20px 0; }
+  .tenant-card { background: var(--surface,#f8fafc); border: 1px solid var(--border,#e2e8f0); border-radius: 8px; padding: 20px; }
+  .tenant-card h3 { margin: 0 0 8px; }
+  .tenant-card .id { font-family: monospace; font-size: 0.8rem; color: var(--muted,#666); }
+  .tenant-card .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+  .tenant-card .stat { background: #fff; border-radius: 4px; padding: 10px; text-align: center; }
+  .tenant-card .stat .num { font-size: 1.5rem; font-weight: 700; color: var(--primary,#0891b2); }
+  .tenant-card .stat .lbl { font-size: 0.75rem; color: var(--muted,#666); text-transform: uppercase; }
+  .badge-ok { background: #dcfce7; color: #166534; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+  .badge-warn { background: #fef3c7; color: #92400e; padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+</style>
+
+<h1>Fleet Console</h1>
+<p style="color:var(--muted,#666);font-size:0.9rem;">
+  Gestione multi-tenant — ogni clinica ha config, history, DLQ e audit isolati.
+</p>
+
+{% if not enabled %}
+<div style="background:#fef3c7;border-left:4px solid #d97706;padding:16px;margin:20px 0;border-radius:6px;">
+  <b>Fleet mode disattivato.</b><br>
+  Abilitalo in <code>gateway.yaml</code>:
+  <pre style="background:#000;color:#0f0;padding:12px;border-radius:4px;margin-top:8px;font-size:0.8rem;">
+fleet_mode:
+  enabled: true
+  tenants:
+    - {id: "clinic-zurich-01", name: "Praxis A"}
+    - {id: "clinic-luzern-02", name: "Praxis B"}</pre>
+</div>
+{% else %}
+
+<div class="fleet-grid">
+  {% for t in tenants %}
+    <div class="tenant-card">
+      <h3>{{ t.display_name }}</h3>
+      <div class="id">{{ t.id }}</div>
+      <div style="margin-top:12px;">
+        <span class="badge-ok">Attivo</span>
+        <span style="margin-left:8px;font-size:0.85rem;color:var(--muted);">
+          config: {{ t.config_dir }}
+        </span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">—</div><div class="lbl">Sample oggi</div></div>
+        <div class="stat"><div class="num">—</div><div class="lbl">DLQ</div></div>
+      </div>
+      <div style="margin-top:12px;">
+        <a href="/t/{{ t.id }}/" style="color:var(--primary,#0891b2);text-decoration:none;font-size:0.85rem;">
+          Apri pannello →
+        </a>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endblock %}

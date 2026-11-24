@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="de">
+<head><script>window.fetch=function(u){var on=true;return Promise.resolve({ok:true,status:200,json:function(){return Promise.resolve(String(u).indexOf('/api/status')>=0?{service_systemd:on?'active':'inactive',running:on}:String(u).indexOf('dlq')>=0?{entries:[]}:{pending:[]});},text:function(){return Promise.reject()}});};</script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Übersicht — JerumedNexus</title>
+  <style>
+    /* Fonts are served by the Pi: practices are often offline. */
+    @font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap;
+      src: url("file:///home/the-worst/Desktop/nexus-gateway/gateway-seefeld/.arena/run-20261123-175647-s994335/scratch/a007/proj/webui/static/fonts/AtkinsonHyperlegible-Regular.woff2") format("woff2"); }
+    @font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap;
+      src: url("file:///home/the-worst/Desktop/nexus-gateway/gateway-seefeld/.arena/run-20261123-175647-s994335/scratch/a007/proj/webui/static/fonts/AtkinsonHyperlegible-Bold.woff2") format("woff2"); }
+
+    /* ── Design tokens (docs/UI-DESIGN-ARENA.md). Old variable names are kept
+          so pages not redesigned yet still pick up the new look. ── */
+    :root {
+      --page:      #F3F6F7;
+      --surface:   #FFFFFF;
+      --ink:       #17202A;
+      --ink-2:     #4B5763;
+      --ink-3:     #5F6B77;
+      --line:      #D5DCE1;
+      --brand:     #2C5F8A;
+      --brand-2:   #234C6F;
+      --brand-tint:#E6EEF5;
+      --good:      #1E7A46;  --good-tint: #E3F2E9;
+      --warn:      #8A5A00;  --warn-fill: #E9A820; --warn-tint: #FBF1DA;
+      --crit:      #B42318;  --crit-tint: #FBE6E3;
+      --neutral:   #5F6B77;  --neutral-tint: #ECEFF2;
+      --radius:    10px;
+
+      /* legacy names → new tokens */
+      --bg: var(--page); --bg2: var(--surface); --bg3: #EEF2F4; --card: var(--surface);
+      --border: var(--line); --accent: var(--brand); --accent2: var(--brand-2);
+      --accent-ink: var(--brand); --accent-tint: var(--brand-tint);
+      --green: var(--good); --red: var(--crit); --yellow: var(--warn);
+      --text: var(--ink); --text2: var(--ink-2); --text3: var(--ink-3);
+      --mono:    ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace;
+      --sans:    "Atkinson Hyperlegible", system-ui, sans-serif;
+      --display: "Atkinson Hyperlegible", system-ui, sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 18px; -webkit-text-size-adjust: 100%; }
+    body {
+      background: var(--page); color: var(--ink); font-family: var(--sans);
+      font-weight: 400; line-height: 1.5; min-height: 100vh;
+      font-variant-numeric: tabular-nums;
+    }
+    a { color: var(--brand); }
+    a:hover { color: var(--brand-2); }
+    :focus { outline: none; }
+    :focus-visible { outline: 3px solid var(--brand); outline-offset: 3px; border-radius: 4px; }
+    ::selection { background: var(--brand-tint); }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+    /* ── Header ── */
+    .topbar {
+      height: 68px; background: var(--surface); border-bottom: 1px solid var(--line);
+      display: flex; align-items: center; gap: 18px; padding: 0 24px;
+      position: sticky; top: 0; z-index: 20;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.05rem;
+      color: var(--ink); text-decoration: none; white-space: nowrap; min-width: 232px; flex: none; }
+    .brand img { height: 30px; width: auto; }
+    .brand span { color: var(--ink-3); font-weight: 400; }
+    .hdr-pill { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; white-space: nowrap; }
+    .hdr-pill > * { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px;
+      border-radius: 999px; text-decoration: none; color: var(--ink); background: var(--neutral-tint); }
+    .hdr-pill > a { background: var(--warn-tint); color: var(--warn); font-weight: 700; }
+    .hdr-pill .on  { background: var(--good-tint); color: var(--good); }
+    .hdr-pill .off { background: var(--crit-tint); color: var(--crit); }
+    .topbar-spacer { flex: 1; min-width: 0; }
+    .hdr-user { display: flex; align-items: center; gap: 10px; font-size: 0.95rem; white-space: nowrap; color: var(--ink-2); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex: none; }
+    .dot.green { background: var(--good); } .dot.red { background: var(--crit); } .dot.grey { background: var(--neutral); }
+    .btn-icon {
+      width: 44px; height: 44px; border: 1px solid var(--line); border-radius: var(--radius);
+      background: var(--surface); color: var(--ink-2); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; text-decoration: none;
+    }
+    .btn-icon:hover { border-color: var(--brand); color: var(--brand); }
+
+    /* ── Sidebar ── */
+    .shell { display: flex; min-height: calc(100vh - 68px); }
+    .sidebar {
+      width: 256px; background: var(--surface); border-right: 1px solid var(--line);
+      display: flex; flex-direction: column; flex-shrink: 0;
+      position: sticky; top: 68px; height: calc(100vh - 68px); overflow-y: auto;
+    }
+    .sidebar nav { padding: 16px 12px; flex: 1; display: flex; flex-direction: column; gap: 4px; }
+    .nav-section { font-size: 0.85rem; color: var(--ink-3); padding: 18px 12px 6px; }
+    .nav-link {
+      display: flex; align-items: center; gap: 14px; min-height: 52px;
+      padding: 10px 14px; border-radius: var(--radius);
+      color: var(--ink); text-decoration: none; font-size: 1.05rem;
+    }
+    .nav-link:hover { background: var(--page); color: var(--ink); }
+    .nav-link.active { background: var(--brand-tint); color: var(--brand-2); font-weight: 700; }
+    .nav-link svg { flex-shrink: 0; width: 24px; height: 24px; }
+    .tech-nav .nav-link { min-height: 40px; font-size: 0.92rem; color: var(--ink-2); }
+    .tech-nav .nav-link svg { width: 18px; height: 18px; }
+    .nav-badge { margin-left: auto; font-size: 0.8rem; font-weight: 700; padding: 1px 9px;
+      border-radius: 999px; color: #fff; display: none; }
+    .sidebar-footer { padding: 14px 24px; border-top: 1px solid var(--line); }
+    .device-info { font-size: 0.8rem; color: var(--ink-3); line-height: 1.6; }
+    body[data-view="studio"] .tech-only { display: none !important; }
+    body[data-view="tech"]   .studio-only { display: none !important; }
+
+    /* ── Main ── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+    .content { padding: 32px 40px 64px; flex: 1; max-width: 1280px; width: 100%; }
+    .page-kicker { font-size: 0.9rem; color: var(--ink-3); }
+    .page-h1 { font-weight: 700; font-size: 2rem; line-height: 1.15; margin: 2px 0 18px; }
+    .page-desc { color: var(--ink-2); max-width: 68ch; margin-top: -8px; margin-bottom: 20px; }
+
+    /* ── Cards ── */
+    .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 22px 24px; margin-bottom: 24px; }
+    .card-header { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+      margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
+    .card-title { font-size: 1.15rem; font-weight: 700; color: var(--ink); display: flex; align-items: center; gap: 8px; }
+    .card-title svg { color: var(--brand); }
+    .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-bottom: 24px; }
+    .grid-2 { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 24px; }
+    @media (max-width: 900px) { .grid-4 { grid-template-columns: repeat(2, minmax(0,1fr)); } .grid-2 { grid-template-columns: 1fr; } }
+    .stat { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+    .stat-label { font-size: 0.85rem; color: var(--ink-3); margin-bottom: 6px; }
+    .stat-value { font-size: 2rem; font-weight: 700; color: var(--ink); line-height: 1.1; }
+    .stat-value.red { color: var(--crit); }
+    .stat-sub { font-size: 0.85rem; color: var(--ink-3); margin-top: 4px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      min-height: 48px; padding: 10px 20px; font: inherit; font-size: 1rem; font-weight: 700;
+      border-radius: var(--radius); border: 2px solid var(--line); cursor: pointer;
+      text-decoration: none; white-space: nowrap; background: var(--surface); color: var(--ink);
+    }
+    .btn:hover { border-color: var(--brand); color: var(--brand); }
+    .btn-primary, .btn-success { background: var(--brand); border-color: var(--brand); color: #fff; }
+    .btn-primary:hover, .btn-success:hover { background: var(--brand-2); border-color: var(--brand-2); color: #fff; }
+    .btn-danger { border-color: var(--crit); color: var(--crit); }
+    .btn-danger:hover { background: var(--crit-tint); color: var(--crit); }
+    .btn-ghost { background: transparent; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 16px; }
+    .form-label { display: block; font-size: 0.9rem; color: var(--ink-2); margin-bottom: 6px; }
+    .form-control, .form-input {
+      width: 100%; background: var(--surface); border: 2px solid var(--line); border-radius: 8px;
+      color: var(--ink); padding: 8px 12px; min-height: 44px; font: inherit; font-size: 1rem;
+    }
+    .form-control:focus, .form-input:focus { border-color: var(--brand); }
+    .form-control.mono { font-family: var(--mono); font-size: 0.9rem; }
+
+    /* ── Legacy blocks used by technician pages ── */
+    .target-row { display: flex; align-items: center; gap: 12px; padding: 12px 4px; border-bottom: 1px solid var(--line); }
+    .target-row.disabled { opacity: 0.55; }
+    .target-name { font-weight: 700; flex: 1; }
+    .target-type { font-size: 0.8rem; color: var(--ink-2); background: var(--page); padding: 2px 8px; border-radius: 6px; }
+    .target-status { font-size: 0.9rem; white-space: nowrap; }
+    .target-status.ok { color: var(--good); } .target-status.err { color: var(--crit); } .target-status.off { color: var(--ink-3); }
+    .service-badge { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; padding: 4px 12px;
+      border: 1px solid var(--line); border-radius: 999px; }
+    .log-viewer { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+      padding: 12px 16px; font-family: var(--mono); font-size: 0.8rem; line-height: 1.75; max-height: 520px; overflow-y: auto; }
+    .log-line { border-bottom: 1px solid var(--page); }
+    .log-line.error { color: var(--crit); background: var(--crit-tint); }
+    .log-line.warn { color: var(--warn); } .log-line.ok { color: var(--good); }
+    .toggle { position: relative; display: inline-block; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider { position: absolute; inset: 0; background: var(--line); border-radius: 999px; cursor: pointer; transition: 0.15s; }
+    .toggle-slider:before { content: ""; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.15s; }
+    input:checked + .toggle-slider { background: var(--brand); }
+    input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .alert { padding: 14px 18px; border-radius: var(--radius); font-size: 1rem; margin-bottom: 18px;
+      display: flex; align-items: center; gap: 12px; background: var(--brand-tint); color: var(--ink); }
+    .alert-success { background: var(--good-tint); }
+    .alert-error { background: var(--crit-tint); color: var(--crit); }
+    .alert-info { background: var(--brand-tint); }
+    .alert-warn { background: var(--warn-tint); }
+    .license-badge { display: inline-flex; align-items: center; gap: 5px; font-size: 0.8rem; padding: 2px 10px; border-radius: 999px; }
+    .license-badge.active { background: var(--good-tint); color: var(--good); }
+    .license-badge.inactive { background: var(--crit-tint); color: var(--crit); }
+    #yaml-editor { width: 100%; min-height: 440px; background: var(--surface); border: 2px solid var(--line);
+      border-radius: var(--radius); color: var(--ink); padding: 16px; font-family: var(--mono); font-size: 0.85rem; line-height: 1.7; }
+    .conn-cards { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; margin-bottom: 20px; }
+    .conn-card { border: 2px solid var(--line); border-radius: var(--radius); padding: 16px; cursor: pointer; text-align: left; background: var(--surface); font: inherit; }
+    .conn-card.selected { border-color: var(--brand); background: var(--brand-tint); }
+    .conn-card .icon { display: none; }
+    .conn-card .label { font-size: 1.05rem; font-weight: 700; }
+    .conn-card .desc { font-size: 0.85rem; color: var(--ink-3); margin-top: 3px; }
+    #toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); max-width: min(560px, 92vw);
+      padding: 14px 20px; border-radius: var(--radius); font-size: 1rem; font-weight: 700; z-index: 9999; display: none;
+      box-shadow: 0 10px 30px rgba(23,32,42,0.25); }
+
+    /* ── Status chip: colour + icon shape + word, never colour alone ── */
+    .chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 10px;
+      border-radius: 999px; font-weight: 700; font-size: 0.95rem; white-space: nowrap; }
+    .chip svg { width: 20px; height: 20px; flex: none; }
+    .chip.good { background: var(--good-tint); color: var(--good); }
+    .chip.warning { background: var(--warn-tint); color: var(--warn); }
+    .chip.critical { background: var(--crit-tint); color: var(--crit); }
+    .chip.neutral { background: var(--neutral-tint); color: var(--neutral); }
+
+    /* ── Technician zone: always at the bottom, closed by default ── */
+    .tech-zone { margin-top: 48px; border-top: 2px dashed var(--line); padding-top: 20px; }
+    .tech-zone > summary { cursor: pointer; list-style: none; display: flex; align-items: center; gap: 10px;
+      color: var(--ink-2); font-weight: 700; min-height: 48px; }
+    .tech-zone > summary::-webkit-details-marker { display: none; }
+    .tech-zone > summary::before { content: "▸"; font-size: 1.1rem; }
+    .tech-zone[open] > summary::before { content: "▾"; }
+    .tech-zone > summary small { font-weight: 400; color: var(--ink-3); }
+    .tech-zone-body { margin-top: 20px; }
+
+    /* ── Smaller screens: the menu becomes a scrollable row under the header ── */
+    .hdr-name { white-space: nowrap; }
+    @media (max-width: 900px) {
+      .topbar { height: 60px; padding: 0 12px; gap: 10px; }
+      .brand { min-width: 0; }
+      .brand span, .hdr-user > span, #theme-toggle-slot { display: none; }
+      .shell { flex-direction: column; min-height: calc(100vh - 60px); }
+      .sidebar { position: sticky; top: 60px; z-index: 15; width: 100%; height: auto;
+        border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; }
+      .sidebar nav { flex-direction: row; padding: 6px 8px; gap: 4px; }
+      .nav-link, .tech-nav .nav-link { flex: none; min-height: 48px; white-space: nowrap; padding: 8px 14px; font-size: 1rem; }
+      .tech-nav { display: contents; }
+      .nav-section, .sidebar-footer { display: none; }
+      .content { padding: 20px 16px 48px; }
+    }
+    @media (max-width: 560px) {
+      .brand { font-size: 0; gap: 0; }          /* logo only */
+      .hdr-pill { font-size: 0.85rem; }
+      .hdr-pill > * { padding: 6px 10px; }
+      .lang-picker svg { display: none; }
+      .lang-picker select { font-size: 0.9rem; max-width: 110px; }
+      .btn-icon { width: 40px; height: 40px; }
+    }
+  </style>
+  <meta name="csrf-token" content="BLuKOty40X5NhxOlmzOUmeUbjVvNkKdF3PMUt4qQHsM">
+  
+<script data-x="de.js?v=1795456471"></script>
+<script>window.I18N_LANG="de";window.I18N_LOCALE="de-CH";window.I18N={"1 da controllare": "1 zu prüfen", "1 risultato non arrivato al gestionale": "1 Ergebnis nicht an die Praxissoftware zugestellt", "Accedi": "Anmelden", "Accendi il gateway": "Gateway einschalten", "Acceso": "Ein", "Accesso": "Anmeldung", "Accesso al pannello del gateway": "Zugang zur Gateway-Verwaltung", "Aggiorna ora": "Jetzt aktualisieren", "Aggiornamenti software": "Software-Updates", "Aggiornamento disponibile": "Update verfügbar", "Aggiornamento in corso…": "Update läuft…", "Amministratore": "Administrator", "Analisi oggi": "Analysen heute", "Analisi per giorno": "Analysen pro Tag", "Analisi per giorno, ultimi 7 giorni": "Analysen pro Tag, letzte 7 Tage", "Analizzatore": "Analysegerät", "Analizzatori": "Analysegeräte", "Analizzatori collegati": "Verbundene Analysegeräte", "Apparecchi": "Geräte", "Arresto…": "Wird gestoppt…", "Assegna": "Zuweisen", "Assegnato. Riavvia il gateway (Controllo servizio → Riavvia) per attivare il nuovo device.": "Zugewiesen. Starten Sie das Gateway neu (Dienststeuerung → Neustart), um das neue Gerät zu aktivieren.", "Assistenza Jerumed Nexus GmbH": "Support Jerumed Nexus GmbH", "Avvia": "Starten", "Avvio…": "Wird gestartet…", "Avvisa il tecnico per completare l'assegnazione dell'analizzatore.": "Informieren Sie den Techniker, damit er das Analysegerät zuweist.", "Backup": "Sicherung", "C'è 1 cosa da sistemare.": "Es gibt 1 Sache zu beheben.", "C'è spazio per conservare i risultati?": "Ist genug Speicherplatz für die Ergebnisse da?", "C'è spazio sufficiente.": "Es ist genug Platz vorhanden.", "Carico…": "Wird geladen…", "Cartella condivisa": "Freigegebener Ordner", "Cavo USB": "USB-Kabel", "Cavo di rete": "Netzwerkkabel", "Cavo non rilevato": "Kabel nicht erkannt", "Cerca il problema": "Problem suchen", "Chiama l'assistenza per collegare il software dello studio.": "Rufen Sie den Support an, um die Praxissoftware zu verbinden.", "Chiama l'assistenza.": "Rufen Sie den Support an.", "Chiama l'assistenza: serve una correzione nella configurazione.": "Rufen Sie den Support an: Die Konfiguration muss korrigiert werden.", "Chimica clinica": "Klinische Chemie", "Ci sono {n} cose da sistemare.": "Es gibt {n} Dinge zu beheben.", "Codice OTP (6 cifre)": "OTP-Code (6 Ziffern)", "Codice OTP non valido": "Ungültiger OTP-Code", "Collega gli analizzatori del laboratorio al gestionale dello studio.": "Verbindet die Laborgeräte mit Ihrer Praxissoftware.", "Collega il primo apparecchio per iniziare a ricevere i risultati.": "Verbinden Sie das erste Gerät, um Ergebnisse zu empfangen.", "Collega un apparecchio": "Gerät verbinden", "Collegamento da completare": "Verbindung unvollständig", "Collegare un nuovo apparecchio": "Ein neues Gerät verbinden", "Collegato": "Verbunden", "Conferma OTP": "OTP bestätigen", "Conferma password": "Passwort bestätigen", "Configura": "Einrichten", "Configurazione": "Konfiguration", "Configurazione guidata": "Geführte Einrichtung", "Configurazione guidata — passo {step} di {total}": "Geführte Einrichtung — Schritt {step} von {total}", "Configurazione incompleta:": "Konfiguration unvollständig:", "Configurazione iniziale": "Ersteinrichtung", "Controlla adesso": "Jetzt prüfen", "Controlla che il cavo USB sia inserito e che l'apparecchio sia acceso.": "Prüfen Sie, ob das USB-Kabel eingesteckt und das Gerät eingeschaltet ist.", "Controlla che il computer con il software dello studio sia acceso e in rete. Intanto i risultati restano nel gateway.": "Prüfen Sie, ob der Computer mit der Praxissoftware eingeschaltet und im Netzwerk ist. Bis dahin bleiben die Ergebnisse im Gateway.", "Controlla di nuovo": "Erneut prüfen", "Controlla in pochi secondi tutta la strada dei risultati: gateway, apparecchi, software dello studio e spazio.": "Prüft in wenigen Sekunden den ganzen Weg der Ergebnisse: Gateway, Geräte, Praxissoftware und Speicherplatz.", "Controllo eseguito alle {ora}.": "Geprüft um {ora}.", "Controllo in corso… ci vogliono pochi secondi.": "Prüfung läuft… das dauert nur wenige Sekunden.", "Controllo incompleto.": "Prüfung unvollständig.", "Controllo servizio": "Dienststeuerung", "Controllo…": "Prüfe…", "Cosa fare": "Was tun", "Crea password e continua": "Passwort erstellen und weiter", "Credenziali errate": "Benutzername oder Passwort falsch", "DEMO MODE — dati simulati, non usare in produzione": "DEMO-MODUS — simulierte Daten, nicht im Praxisbetrieb verwenden", "Da controllare": "Zu prüfen", "Da fare": "Zu erledigen", "Da rispedire": "Erneut senden", "Dettagli per il tecnico": "Details für den Techniker", "Device attivo": "Aktives Gerät", "Device rilevati — da assegnare": "Erkannte Geräte — zuzuweisen", "Dom": "So", "Dove vanno i risultati": "Wohin die Ergebnisse gehen", "Ematologia": "Hämatologie", "Emogas": "Blutgas", "Errore": "Fehler", "Errore di rete": "Netzwerkfehler", "Errore di rete: {msg}": "Netzwerkfehler: {msg}", "Errore: {msg}": "Fehler: {msg}", "Errori": "Fehler", "Errori oggi": "Fehler heute", "Esci": "Abmelden", "Esegui il controllo per vedere i dettagli.": "Starten Sie die Prüfung, um die Details zu sehen.", "Esegui un'analisi di prova: quando arriva, l'apparecchio diventa verde.": "Führen Sie eine Testanalyse durch: Sobald sie ankommt, wird das Gerät grün.", "Eseguo…": "Wird ausgeführt…", "Eventi recenti": "Letzte Ereignisse", "Fatto. Stato del servizio: {stato}": "Erledigt. Dienststatus: {stato}", "Ferma": "Stoppen", "Fermare il gateway? Finché è fermo nessun risultato arriva al gestionale.": "Gateway stoppen? Solange es gestoppt ist, kommen keine Ergebnisse in der Praxissoftware an.", "Fermo": "Gestoppt", "Frame Inspector": "Frame Inspector", "Funziona": "Läuft", "Funziona, con {n} errori oggi.": "Läuft, mit {n} Fehlern heute.", "Funziona. 1 messaggio da rispedire.": "Läuft. 1 Nachricht muss erneut gesendet werden.", "Funziona. {n} messaggi da rispedire.": "Läuft. {n} Nachrichten müssen erneut gesendet werden.", "Funziona. {n} risultati aspettano di essere inviati.": "Läuft. {n} Ergebnisse warten auf den Versand.", "Gateway": "Gateway", "Gateway acceso": "Gateway ein", "Gateway spento": "Gateway aus", "Gestionale": "Praxissoftware", "Gestionali collegati": "Verbundene Praxissoftware", "Gio": "Do", "Gli apparecchi arrivano al gateway?": "Erreichen die Geräte das Gateway?", "Gli apparecchi non possono inviare finché il gateway è spento.": "Die Geräte können nichts senden, solange das Gateway aus ist.", "Glicemia": "Blutzucker", "HbA1c e lipidi": "HbA1c und Lipide", "I risultati arrivano a {dest}. Nessun risultato ancora oggi.": "Die Ergebnisse gehen an {dest}. Heute noch keine Ergebnisse.", "I risultati arrivano a {dest}. Ultimo risultato {quando} da {apparecchio}.": "Die Ergebnisse gehen an {dest}. Letztes Ergebnis {quando} vom {apparecchio}.", "I risultati arrivano al paziente giusto?": "Kommen die Ergebnisse beim richtigen Patienten an?", "I risultati non vanno da nessuna parte. Il tecnico deve collegare il software dello studio.": "Die Ergebnisse gehen nirgendwohin. Der Techniker muss die Praxissoftware verbinden.", "I risultati restano nel gateway e partono appena {name} risponde di nuovo.": "Die Ergebnisse bleiben im Gateway und werden gesendet, sobald {name} wieder antwortet.", "I risultati sono indirizzati correttamente.": "Die Ergebnisse sind richtig adressiert.", "I tuoi apparecchi": "Ihre Geräte", "ID paziente": "Patienten-ID", "Il cerchio mostra quanti risultati di oggi sono arrivati al software dello studio.": "Der Kreis zeigt, wie viele Ergebnisse von heute in der Praxissoftware angekommen sind.", "Il gateway ha rilevato questi cavi USB. Scegli a quale analizzatore corrispondono e clicca «Assegna». La configurazione viene salvata da sola.": "Das Gateway hat diese USB-Kabel erkannt. Wählen Sie das passende Analysegerät und klicken Sie auf «Zuweisen». Die Konfiguration wird automatisch gespeichert.", "Il gateway non funziona.": "Das Gateway funktioniert nicht.", "Il gateway si sta avviando. Riprova fra un minuto.": "Das Gateway startet gerade. Versuchen Sie es in einer Minute erneut.", "Il gateway è acceso e funziona.": "Das Gateway ist eingeschaltet und läuft.", "Il gateway è acceso?": "Ist das Gateway eingeschaltet?", "Il gateway è spento. I risultati non arrivano allo studio.": "Das Gateway ist aus. Die Ergebnisse kommen nicht in der Praxis an.", "Il gestionale non ha risposto in tempo. Nessun dato è perso: rispediscili quando è di nuovo raggiungibile.": "Die Praxissoftware hat nicht rechtzeitig geantwortet. Es gehen keine Daten verloren: Senden Sie sie erneut, sobald sie wieder erreichbar ist.", "Il nome dello studio non è ancora stato inserito.": "Der Name der Praxis ist noch nicht eingetragen.", "Il servizio è fermo. Nessun risultato arriva al gestionale.": "Der Dienst ist gestoppt. Es kommen keine Ergebnisse in der Praxissoftware an.", "Il software dello studio potrebbe non assegnare i risultati ai pazienti.": "Die Praxissoftware ordnet die Ergebnisse eventuell keinem Patienten zu.", "Il software dello studio risponde?": "Antwortet die Praxissoftware?", "Imposta la password di amministrazione del gateway": "Legen Sie das Administrator-Passwort des Gateways fest", "In attesa dei risultati di oggi…": "Warten auf die heutigen Ergebnisse…", "In attesa di analisi": "Wartet auf Analysen", "In attesa…": "Warten…", "Inseriscilo in Configurazione": "Tragen Sie ihn unter Konfiguration ein", "Invia di nuovo": "Erneut senden", "La password deve avere almeno {n} caratteri.": "Das Passwort muss mindestens {n} Zeichen lang sein.", "Latenza P95": "Latenz P95", "Le password non coincidono.": "Die Passwörter stimmen nicht überein.", "Licenza": "Lizenz", "Licenza in scadenza": "Lizenz läuft bald ab", "Licenza scaduta": "Lizenz abgelaufen", "Lo spazio si sta esaurendo.": "Der Speicherplatz wird knapp.", "Log di sistema": "Systemprotokoll", "Log e trace": "Protokolle", "Log non disponibili.": "Protokolle nicht verfügbar.", "Lun": "Mo", "Mai sentito": "Noch nie gemeldet", "Mar": "Di", "Menu": "Menü", "Mer": "Mi", "Messaggi": "Nachrichten", "Minimo {n} caratteri. Suggerito: mix di lettere, numeri e simboli.": "Mindestens {n} Zeichen. Empfohlen: Buchstaben, Zahlen und Sonderzeichen gemischt.", "Monitor": "Überwachung", "Nessun analizzatore collegato al momento.": "Zurzeit ist kein Analysegerät verbunden.", "Nessun apparecchio è ancora collegato.": "Es ist noch kein Gerät verbunden.", "Nessun apparecchio è attivo.": "Kein Gerät ist aktiv.", "Nessun evento registrato.": "Keine Ereignisse.", "Nessun gestionale configurato.": "Keine Praxissoftware eingerichtet.", "Nessun risultato finora.": "Noch keine Ergebnisse.", "Nessun software dello studio è collegato.": "Es ist keine Praxissoftware verbunden.", "Nessuno collegato": "Keines verbunden", "No": "Nein", "Non collegato": "Nicht verbunden", "Non esiste una password di default.": "Es gibt kein Standardpasswort.", "Non ha ancora inviato nessun risultato. Invia un risultato di prova dall'apparecchio.": "Hat noch kein Ergebnis gesendet. Senden Sie ein Testergebnis vom Gerät.", "Non raggiungibile": "Nicht erreichbar", "Non verificabile": "Nicht prüfbar", "Non è stato possibile accendere il gateway. Spegni e riaccendi la scatola grigia, oppure chiama l'assistenza.": "Das Gateway konnte nicht eingeschaltet werden. Schalten Sie die graue Box aus und wieder ein, oder rufen Sie den Support an.", "Non è stato possibile controllarlo.": "Konnte nicht geprüft werden.", "Non è stato possibile eseguire il controllo: {msg}": "Die Prüfung konnte nicht durchgeführt werden: {msg}", "Nuova password": "Neues Passwort", "Nuovo apparecchio collegato via USB": "Neues Gerät per USB angeschlossen", "Nuovo cavo USB collegato": "Neues USB-Kabel angeschlossen", "OK": "OK", "Oggi": "Heute", "Ogni apparecchio collegato al gateway, e se sta inviando i risultati.": "Jedes Gerät am Gateway, und ob es Ergebnisse sendet.", "Ora": "Zeit", "Panoramica": "Übersicht", "Parziali": "Teilweise", "Passo {step} di {total}": "Schritt {step} von {total}", "Password": "Passwort", "Per il tecnico": "Für den Techniker", "Percorso dei risultati": "Weg der Ergebnisse", "Premi «Controlla adesso». Non cambia niente: guarda soltanto.": "Klicken Sie auf «Jetzt prüfen». Es wird nichts verändert, nur nachgeschaut.", "Primo avvio": "Erster Start", "Pronto": "Bereit", "Questa è l'unica password di accesso al pannello.": "Dies ist das einzige Passwort für die Verwaltung.", "Recapitato": "Zugestellt", "Referti": "Befunde", "Rete": "Netzwerk", "Riavvia": "Neu starten", "Riavvia il gateway. Se l'apparecchio non arriva ancora, chiama l'assistenza.": "Starten Sie das Gateway neu. Wenn das Gerät immer noch nicht ankommt, rufen Sie den Support an.", "Riavvio…": "Wird neu gestartet…", "Riceve i risultati": "Empfängt Ergebnisse", "Rispedisci": "Erneut senden", "Risultati": "Ergebnisse", "Risultati di oggi": "Ergebnisse von heute", "Risultati in attesa": "Ergebnisse warten", "Sab": "Sa", "Scegli un tipo di analizzatore.": "Wählen Sie einen Gerätetyp.", "Scegli una password forte — sarà l'unico modo per accedere al gateway.": "Wählen Sie ein sicheres Passwort — es ist der einzige Zugang zum Gateway.", "Segui le indicazioni qui sotto, dall'alto verso il basso.": "Folgen Sie den Hinweisen unten, von oben nach unten.", "Serve aiuto? Assistenza: +41 78 402 05 99": "Brauchen Sie Hilfe? Support: +41 78 402 05 99", "Servizio attivo": "Dienst läuft", "Servizio fermo": "Dienst gestoppt", "Setup guidato": "Einrichtungsassistent", "Sistema": "System", "Software aggiornato": "Software ist aktuell", "Software dello studio": "Praxissoftware", "Sono conservati nel gateway. Inviali di nuovo quando il software dello studio è raggiungibile.": "Sie sind im Gateway gespeichert. Senden Sie sie erneut, sobald die Praxissoftware erreichbar ist.", "Spazio quasi esaurito: il gateway smetterà di salvare i risultati.": "Speicher fast voll: Das Gateway kann bald keine Ergebnisse mehr speichern.", "Spegni e riaccendi il gateway (la scatola grigia). Se non basta, chiama l'assistenza.": "Schalten Sie das Gateway (die graue Box) aus und wieder ein. Wenn das nicht hilft, rufen Sie den Support an.", "Spento": "Aus", "Stato": "Status", "Strumenti avanzati": "Erweiterte Werkzeuge", "Studio": "Praxis", "Sì": "Ja", "Tecnico": "Techniker", "Test in corso…": "Test läuft…", "Topologia": "Topologie", "Totale storico": "Gesamt", "Trace protocollo": "Protokoll-Trace", "Troppi tentativi — riprova tra {m}m {s}s.": "Zu viele Versuche — bitte in {m} Min. {s} Sek. erneut versuchen.", "Tutti": "Alle", "Tutti funzionano": "Alle funktionieren", "Tutti gli apparecchi": "Alle Geräte", "Tutti i log": "Alle Protokolle", "Tutti →": "Alle →", "Tutto a posto.": "Alles in Ordnung.", "Tutto funziona.": "Alles funktioniert.", "Ultima analisi": "Letzte Analyse", "Ultime 24 ore": "Letzte 24 Stunden", "Ultimo contatto {quando}": "Letzter Kontakt {quando}", "Ultimo risultato {quando}": "Letztes Ergebnis {quando}", "Uptime": "Betriebszeit", "Urine": "Urin", "Uscire dalla sessione?": "Abmelden?", "Utente": "Benutzer", "Utenti": "Benutzer", "Vai ai messaggi da rispedire": "Zu den erneut zu sendenden Nachrichten", "Vai al rinnovo": "Zur Verlängerung", "Vai alla configurazione": "Zur Konfiguration", "Valori": "Werte", "Ven": "Fr", "Verifica": "Prüfen", "Verifica impianto": "Anlage prüfen", "Verifico lo stato…": "Status wird geprüft…", "Verifico…": "Prüfe…", "Vista": "Ansicht", "Wire Replay": "Wire Replay", "aggiornato alle {ora}": "aktualisiert um {ora}", "analisi": "Analysen", "analisi oggi": "Analysen heute", "analizzatore": "Analysegerät", "catalogo, scansione USB, parametri, porte e protocolli": "Katalog, USB-Suche, Parameter, Ports und Protokolle", "confidenza": "Übereinstimmung", "connesso": "verbunden", "da assegnare": "zuzuweisen", "da rispedire": "erneut zu senden", "dall'installazione": "seit der Installation", "disabilitato": "deaktiviert", "dispositivo generico": "unbekanntes Gerät", "errore": "Fehler", "errori, tempi, eventi, servizio, aggiornamenti": "Fehler, Zeiten, Ereignisse, Dienst, Updates", "fermo": "gestoppt", "generico": "generisch", "gestionale": "Praxissoftware", "ieri alle {ora}": "gestern um {ora}", "il gateway continua a funzionare ma non riceve aggiornamenti. Contattare il rivenditore.": "das Gateway läuft weiter, erhält aber keine Updates mehr. Bitte wenden Sie sich an Ihren Händler.", "il tecnico imposta una volta l'indirizzo del gateway sull'apparecchio.": "der Techniker stellt die Adresse des Gateways einmal am Gerät ein.", "il {data} alle {ora}": "am {data} um {ora}", "in attesa": "wartend", "in coda morta": "in der Fehlerablage", "inseriscilo nel gateway. L'apparecchio compare qui da solo dopo qualche secondo.": "in das Gateway einstecken. Das Gerät erscheint nach einigen Sekunden von selbst hier.", "mai": "nie", "mancano {n} giorni": "noch {n} Tage", "nessun dato nelle ultime 24 ore": "keine Daten in den letzten 24 Stunden", "oggi alle {ora}": "heute um {ora}", "ogni controllo con il comando da eseguire": "jede Prüfung mit dem auszuführenden Befehl", "ok": "ok", "operazione non riuscita": "Vorgang fehlgeschlagen", "ore operative": "Betriebsstunden", "prima di usare il gateway.": "bevor Sie das Gateway verwenden.", "protocollo": "Protokoll", "recapitate al gestionale": "an die Praxissoftware zugestellt", "recapitati oggi": "heute zugestellt", "risultati ricevuti": "empfangene Ergebnisse", "sconosciuto": "unbekannt", "trasmissioni fallite": "fehlgeschlagene Übertragungen", "ultimo invio": "letzter Versand", "urinalisi": "Urinanalyse", "verifico…": "prüfe…", "{name} non riceve i risultati.": "{name} empfängt keine Ergebnisse.", "{name}: cavo USB non rilevato.": "{name}: USB-Kabel nicht erkannt.", "{name}: collegato.": "{name}: verbunden.", "{name}: il cavo non è collegato.": "{name}: Das Kabel ist nicht angeschlossen.", "{name}: il gateway non lo riceve.": "{name}: Das Gateway empfängt es nicht.", "{name}: manca il tipo di collegamento.": "{name}: Die Verbindungsart fehlt.", "{name}: non risponde.": "{name}: antwortet nicht.", "{name}: pronto a ricevere.": "{name}: empfangsbereit.", "{name}: risponde.": "{name}: antwortet.", "{nomi}. Il tecnico deve confermarlo una volta, poi funziona da solo.": "{nomi}. Der Techniker muss es einmal bestätigen, danach läuft es von selbst.", "{n} analisi": "{n} Analysen", "{n} collegati": "{n} verbunden", "{n} da assegnare": "{n} zuzuweisen", "{n} da controllare": "{n} zu prüfen", "{n} da rispedire": "{n} erneut zu senden", "{n} in attesa": "{n} wartend", "{n} in attesa di analisi": "{n} warten auf Analysen", "{n} in attesa di invio": "{n} warten auf Versand", "{n} messaggi da rispedire": "{n} Nachrichten erneut zu senden", "{n} non recapitati": "{n} nicht zugestellt", "{n} nuovi apparecchi trovati — apri Analizzatori per attivarli": "{n} neue Geräte gefunden — öffnen Sie «Analysegeräte», um sie zu aktivieren", "{n} recapitati": "{n} zugestellt", "{n} recapitati oggi": "{n} heute zugestellt", "{n} risultati in attesa": "{n} Ergebnisse warten", "{n} risultati non arrivati al gestionale": "{n} Ergebnisse nicht an die Praxissoftware zugestellt", "{n} risultati oggi": "{n} Ergebnisse heute", "{ok} di {n} risultati recapitati": "{ok} von {n} Ergebnissen zugestellt", "{up} di {n} attivi": "{up} von {n} aktiv"};</script><script src="file:///home/the-worst/Desktop/nexus-gateway/gateway-seefeld/.arena/run-20261123-175647-s994335/scratch/a007/proj/webui/static/i18n.js?v=3"></script>
+  <link rel="stylesheet" href="file:///home/the-worst/Desktop/nexus-gateway/gateway-seefeld/.arena/run-20261123-175647-s994335/scratch/a007/proj/webui/static/ui.css?v=2">
+  
+</head>
+<body data-view="studio" data-role="operator">
+
+
+<header class="topbar">
+  <a href="/" class="brand"><img src="file:///home/the-worst/Desktop/nexus-gateway/gateway-seefeld/.arena/run-20261123-175647-s994335/scratch/a007/proj/webui/static/logo.png" alt="">JerumedNexus <span>Gateway</span></a>
+  <div class="hdr-pill">
+    
+    <span id="svc-badge"><span class="dot grey" id="svc-dot"></span><span id="svc-text">Prüfe…</span></span>
+    <a href="/dlq" id="hdr-dlq" style="display:none;"><span id="hdr-dlq-text"></span></a>
+  </div>
+  <div class="topbar-spacer"></div>
+  
+<label class="lang-picker" title="Lingua · Sprache · Langue · Language">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+  <select id="lang-select" onchange="setLang(this.value)" aria-label="Lingua · Sprache · Langue · Language">
+    
+    <option value="it" >Italiano</option>
+    
+    <option value="de" selected>Deutsch</option>
+    
+    <option value="fr" >Français</option>
+    
+    <option value="en" >English</option>
+    
+  </select>
+</label>
+<style>
+  .lang-picker { display:inline-flex; align-items:center; gap:6px; border:1px solid var(--border, #cfd0d3); padding:0 4px 0 8px; color:var(--text2, #4a4c4f); }
+  .lang-picker select { font:inherit; font-size:0.95rem; min-height:34px; padding:2px 4px; border:0; background:transparent; color:var(--text, #1d1f20); cursor:pointer; }
+</style>
+  <span id="theme-toggle-slot"></span>
+  <div class="hdr-user">
+    <span>Dr. Annamaria Bernasconi-Huber</span>
+    <a href="/logout" class="btn-icon" title="Abmelden" aria-label="Abmelden" onclick="return confirm(T('Uscire dalla sessione?'))">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+    </a>
+  </div>
+</header>
+
+<div class="shell">
+<aside class="sidebar">
+  <nav aria-label="Menü">
+    
+    <a href="/" class="nav-link active">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/></svg>
+      Übersicht
+    </a>
+    <a href="/analyzers" class="nav-link ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M9 3h6"/><path d="M10 3v6.5L4.5 19a1.5 1.5 0 0 0 1.3 2.2h12.4a1.5 1.5 0 0 0 1.3-2.2L14 9.5V3"/><path d="M7 15h10"/></svg>
+      Geräte
+      <span id="pending-devices-badge" class="nav-badge" style="background:var(--brand);"></span>
+    </a>
+    <a href="/verifica" class="nav-link ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      Anlage prüfen
+    </a>
+    <a href="/results" class="nav-link ">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg>
+      Ergebnisse
+    </a>
+
+    
+    <div class="tech-only tech-nav">
+      <div class="nav-section">Für den Techniker</div>
+      <a href="/dlq" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+        Erneut senden
+        <span id="dlq-badge" class="nav-badge" style="background:var(--warn);"></span>
+      </a>
+      <a href="/logs" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Protokolle
+      </a>
+      <a href="/inspect" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        Frame Inspector
+      </a>
+      <a href="/config" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Konfiguration
+      </a>
+      <a href="/users" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+        Benutzer
+      </a>
+      <a href="/license" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        Lizenz
+      </a>
+      <a href="/topology" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="18" cy="18" r="3"/><path d="M8.5 8.5l7 7"/></svg>
+        Topologie
+      </a>
+      <a href="/replay" class="nav-link ">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+        Wire Replay
+      </a>
+    </div>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="device-info">
+      <div>the-worst</div>
+      <div>v1.3.0 · S/N 264664988151072</div>
+    </div>
+  </div>
+</aside>
+
+<!-- Main -->
+<div class="main">
+  <div class="content">
+    
+    
+    
+    <div class="alert alert-error">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="flex-shrink:0"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <span><strong>Konfiguration unvollständig:</strong>
+      Der Name der Praxis ist noch nicht eingetragen.
+      <a href="/config">Tragen Sie ihn unter Konfiguration ein</a> bevor Sie das Gateway verwenden.</span>
+    </div>
+    
+    
+
+
+
+
+<div id="ov-live">
+
+
+
+
+
+<section class="ov-head warning" aria-live="polite">
+  <div class="ov-head-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8L23 21.5H1z" fill="var(--warn-fill)" stroke="var(--warn)" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 8.5v6" stroke="#17202A" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="#17202A"/></svg></div>
+  <div class="ov-head-text">
+    <h1>UC-1000: Das Kabel ist nicht angeschlossen.</h1>
+    <p>Prüfen Sie, ob das USB-Kabel eingesteckt und das Gerät eingeschaltet ist.</p>
+  </div>
+  <div class="ov-head-action"><a class="btn btn-primary btn-lg" href="/verifica">Problem suchen</a></div>
+</section>
+
+
+
+
+
+
+<section class="ov-path flowing" aria-label="Weg der Ergebnisse">
+  <a class="ov-station" href="/analyzers">
+    <span class="ov-station-label">Geräte</span>
+    <span class="ov-station-value">2 von 4 aktiv</span>
+    <span class="ov-meter" aria-hidden="true"><i class="critical" title="UC-1000"></i><i class="warning" title="Seamaty SMT-120"></i><i class="good" title="Cobas b 101"></i><i class="good" title="Sysmex XQ-320"></i></span>
+    <span class="chip critical"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 1h9.2L23 7.4v9.2L16.6 23H7.4L1 16.6V7.4z" fill="currentColor"/><path d="M8.2 8.2l7.6 7.6M15.8 8.2l-7.6 7.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>2 zu prüfen</span>
+  </a>
+  <span class="ov-link " aria-hidden="true"><i></i><i></i><i></i></span>
+  <div class="ov-station">
+    <span class="ov-station-label">Gateway</span>
+    <span class="ov-station-value">Ein</span>
+    <span class="ov-station-sub">23 Ergebnisse heute</span>
+    <span class="chip good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Läuft</span>
+  </div>
+  <span class="ov-link " aria-hidden="true"><i></i><i></i><i></i></span>
+  <div class="ov-station">
+    <span class="ov-station-label">Praxissoftware</span>
+    
+    <ul class="ov-dest-mini">
+      
+      <li class="good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Tomedo</b><small>Empfängt Ergebnisse</small></span></li>
+      
+      <li class="good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span><b>Archiv</b><small>Empfängt Ergebnisse</small></span></li>
+      
+    </ul>
+    <span class="ov-station-sub">22 heute zugestellt</span>
+    
+  </div>
+</section>
+
+
+<section class="ov-numbers">
+  <div class="ov-card ov-today">
+    <h2>Heute</h2>
+    
+    
+    
+    <div class="ov-today-body">
+      <svg class="ov-ring" viewBox="0 0 128 128" role="img"
+           aria-label="22 von 23 Ergebnissen zugestellt">
+        <circle cx="64" cy="64" r="52" class="track"/>
+        <circle cx="64" cy="64" r="52" class="value "
+          stroke-dasharray="312.5 326.7" transform="rotate(-90 64 64)"/>
+        <text x="64" y="66" class="num">23</text>
+        <text x="64" y="88" class="lbl">Analysen</text>
+      </svg>
+      <ul class="ov-today-list">
+        <li class="ov-today-caption">Der Kreis zeigt, wie viele Ergebnisse von heute in der Praxissoftware angekommen sind.</li>
+        <li><span class="chip good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>22 zugestellt</span></li>
+        <li><span class="chip critical"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 1h9.2L23 7.4v9.2L16.6 23H7.4L1 16.6V7.4z" fill="currentColor"/><path d="M8.2 8.2l7.6 7.6M15.8 8.2l-7.6 7.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>1 nicht zugestellt</span></li>
+        
+      </ul>
+    </div>
+  </div>
+
+  <div class="ov-card ov-week">
+    <h2>Analysen pro Tag</h2>
+    
+    
+    <div class="ov-bars" role="table" aria-label="Analysen pro Tag, letzte 7 Tage">
+      
+      
+      <div class="ov-bar " role="row" tabindex="0"
+           title="Di 17.11.: 12 Analysen">
+        <span class="v" role="cell">12</span>
+        <span class="b" style="height: 27.3%;"></span>
+        <span class="d" role="rowheader">Di</span>
+      </div>
+      
+      
+      <div class="ov-bar " role="row" tabindex="0"
+           title="Mi 18.11.: 31 Analysen">
+        <span class="v" role="cell">31</span>
+        <span class="b" style="height: 70.5%;"></span>
+        <span class="d" role="rowheader">Mi</span>
+      </div>
+      
+      
+      <div class="ov-bar " role="row" tabindex="0"
+           title="Do 19.11.: 27 Analysen">
+        <span class="v" role="cell">27</span>
+        <span class="b" style="height: 61.4%;"></span>
+        <span class="d" role="rowheader">Do</span>
+      </div>
+      
+      
+      <div class="ov-bar " role="row" tabindex="0"
+           title="Fr 20.11.: 0 Analysen">
+        <span class="v" role="cell">0</span>
+        <span class="b" style="height: 0.0%;"></span>
+        <span class="d" role="rowheader">Fr</span>
+      </div>
+      
+      
+      <div class="ov-bar " role="row" tabindex="0"
+           title="Sa 21.11.: 44 Analysen">
+        <span class="v" role="cell">44</span>
+        <span class="b" style="height: 100.0%;"></span>
+        <span class="d" role="rowheader">Sa</span>
+      </div>
+      
+      
+      <div class="ov-bar " role="row" tabindex="0"
+           title="So 22.11.: 38 Analysen">
+        <span class="v" role="cell">38</span>
+        <span class="b" style="height: 86.4%;"></span>
+        <span class="d" role="rowheader">So</span>
+      </div>
+      
+      
+      <div class="ov-bar today" role="row" tabindex="0"
+           title="Mo 23.11.: 23 Analysen">
+        <span class="v" role="cell">23</span>
+        <span class="b" style="height: 52.3%;"></span>
+        <span class="d" role="rowheader">Heute</span>
+      </div>
+      
+    </div>
+  </div>
+</section>
+
+
+<section class="ov-section">
+  <div class="ov-section-head">
+    <h2>Ihre Geräte</h2>
+    <a class="btn" href="/analyzers">Alle Geräte</a>
+  </div>
+  
+  <div class="mc-grid">
+    
+
+<article class="mc critical">
+  <div class="mc-top">
+    <span class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 2.5h6"/><path d="M10 2.5v15a2 2 0 0 0 4 0v-15"/><path d="M10 11h4"/></svg></span>
+    <div class="mc-title">
+      <h3>UC-1000</h3>
+      <span>Urin</span>
+      <span>USB-Kabel</span>
+    </div>
+  </div>
+  <span class="chip critical"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 1h9.2L23 7.4v9.2L16.6 23H7.4L1 16.6V7.4z" fill="currentColor"/><path d="M8.2 8.2l7.6 7.6M15.8 8.2l-7.6 7.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>Kabel nicht erkannt</span>
+  <div class="mc-numbers">
+    <div><b>0</b><span>Analysen heute</span></div>
+  </div>
+  <p class="mc-hint">Prüfen Sie, ob das USB-Kabel eingesteckt und das Gerät eingeschaltet ist.</p>
+</article>
+
+<article class="mc warning">
+  <div class="mc-top">
+    <span class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 2.5h6"/><path d="M10 2.5v15a2 2 0 0 0 4 0v-15"/><path d="M10 11h4"/></svg></span>
+    <div class="mc-title">
+      <h3>Seamaty SMT-120</h3>
+      <span>Klinische Chemie</span>
+      <span>Netzwerkkabel</span>
+    </div>
+  </div>
+  <span class="chip warning"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8L23 21.5H1z" fill="var(--warn-fill)" stroke="var(--warn)" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 8.5v6" stroke="#17202A" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="#17202A"/></svg>Noch nie gemeldet</span>
+  <div class="mc-numbers">
+    <div><b>0</b><span>Analysen heute</span></div>
+  </div>
+  <p class="mc-hint">Hat noch kein Ergebnis gesendet. Senden Sie ein Testergebnis vom Gerät.</p>
+</article>
+
+<article class="mc good">
+  <div class="mc-top">
+    <span class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 2.5h6"/><path d="M10 2.5v15a2 2 0 0 0 4 0v-15"/><path d="M10 11h4"/></svg></span>
+    <div class="mc-title">
+      <h3>Cobas b 101</h3>
+      <span>HbA1c und Lipide</span>
+      <span>USB-Kabel</span>
+    </div>
+  </div>
+  <span class="chip good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Verbunden</span>
+  <div class="mc-numbers">
+    <div><b>1</b><span>Analysen heute</span></div>
+  </div>
+  <p class="mc-hint">Letztes Ergebnis heute um 14:40</p>
+</article>
+
+<article class="mc good">
+  <div class="mc-top">
+    <span class="mc-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 2.5h6"/><path d="M10 2.5v15a2 2 0 0 0 4 0v-15"/><path d="M10 11h4"/></svg></span>
+    <div class="mc-title">
+      <h3>Sysmex XQ-320</h3>
+      <span>Hämatologie</span>
+      <span>Netzwerkkabel</span>
+    </div>
+  </div>
+  <span class="chip good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Verbunden</span>
+  <div class="mc-numbers">
+    <div><b>22</b><span>Analysen heute</span></div>
+  </div>
+  <p class="mc-hint">Letztes Ergebnis heute um 14:55</p>
+</article>
+  </div>
+  
+</section>
+
+
+<section class="ov-section">
+  <div class="ov-section-head"><h2>Wohin die Ergebnisse gehen</h2></div>
+  
+  <div class="dc-list">
+    
+    <div class="dc good">
+      <div class="dc-name"><strong>Tomedo</strong><span>Tomedo</span></div>
+      <div class="dc-stat"><b>22</b><span>heute zugestellt</span></div>
+      <div class="dc-stat"><b>heute um 14:55</b><span>letzter Versand</span></div>
+      <div class="dc-state"><span class="chip good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Empfängt Ergebnisse</span></div>
+    </div>
+    
+    <div class="dc good">
+      <div class="dc-name"><strong>Archiv</strong><span>Freigegebener Ordner</span></div>
+      <div class="dc-stat"><b>23</b><span>heute zugestellt</span></div>
+      <div class="dc-stat"><b>heute um 14:55</b><span>letzter Versand</span></div>
+      <div class="dc-state"><span class="chip good"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Empfängt Ergebnisse</span></div>
+    </div>
+    
+  </div>
+  
+</section></div>
+
+
+<details class="tech-zone tech-only" id="tech-zone">
+  <summary>Details für den Techniker <small>Fehler, Zeiten, Ereignisse, Dienst, Updates</small></summary>
+  <div class="tech-zone-body">
+
+    <div class="grid-4">
+      <div class="stat"><div class="stat-label">Fehler heute</div>
+        <div class="stat-value " id="stat-errors">0</div>
+        <div class="stat-sub">fehlgeschlagene Übertragungen</div></div>
+      <div class="stat"><div class="stat-label">Gesamt</div>
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-sub">seit der Installation</div></div>
+      <div class="stat"><div class="stat-label">Betriebszeit</div>
+        <div class="stat-value" id="stat-uptime">—</div>
+        <div class="stat-sub">Betriebsstunden</div></div>
+      <div class="stat"><div class="stat-label">Latenz P95</div>
+        <div class="stat-value" id="stat-p95">—</div>
+        <div class="stat-sub">Analysegerät &rarr; Praxissoftware</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Letzte 24 Stunden</div>
+          <div style="display:flex;gap:14px;font-size:0.85rem;color:var(--ink-3);">
+            <span><span class="dot" style="background:var(--brand);"></span> OK</span>
+            <span><span class="dot" style="background:var(--warn-fill);"></span> Teilweise</span>
+            <span><span class="dot" style="background:var(--crit);"></span> Fehler</span>
+          </div>
+        </div>
+        <svg id="trend-svg" viewBox="0 0 720 160" style="width:100%;height:190px;display:block;"></svg>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Letzte Ereignisse</div>
+          <a href="/logs" style="font-size:0.9rem;">Alle Protokolle</a>
+        </div>
+        <div id="eventi-recenti" style="display:flex;flex-direction:column;">
+          <div style="color:var(--ink-3);padding:14px 0;">Wird geladen…</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">Dienststeuerung</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="serviceAction('start')">Starten</button>
+          <button class="btn" onclick="serviceAction('restart')">Neu starten</button>
+          <button class="btn btn-danger" onclick="if(confirm(T('Fermare il gateway? Finché è fermo nessun risultato arriva al gestionale.'))) serviceAction('stop')">Stoppen</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">Software-Updates</div>
+          <span id="update-status" style="font-size:0.9rem;color:var(--ink-3);">—</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" onclick="checkUpdate()">Prüfen</button>
+          <button class="btn btn-primary" style="display:none;" id="btn-update" onclick="applyUpdate()">Jetzt aktualisieren</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="discovered-card" style="display:none;">
+      <div class="card-header">
+        <div class="card-title">Erkannte Geräte — zuzuweisen</div>
+        <span id="discovered-count" style="font-size:0.9rem;color:var(--ink-3);"></span>
+      </div>
+      <p style="color:var(--ink-2);margin-bottom:12px;">
+        Das Gateway hat diese USB-Kabel erkannt. Wählen Sie das passende Analysegerät und klicken Sie auf «Zuweisen». Die Konfiguration wird automatisch gespeichert.
+      </p>
+      <div id="discovered-list" style="display:flex;flex-direction:column;"></div>
+    </div>
+
+  </div>
+</details>
+
+  </div>
+</div>
+</div>
+
+<!-- Toast notification -->
+<div id="toast"></div>
+
+<script>
+// ── CSRF: auto-inject X-CSRF-Token on non-GET /api/ fetches ────────
+(function() {
+  const _tokEl = document.querySelector('meta[name="csrf-token"]');
+  const CSRF_TOKEN = _tokEl ? _tokEl.getAttribute('content') : '';
+  window.CSRF_TOKEN = CSRF_TOKEN;
+  const _origFetch = window.fetch.bind(window);
+  window.fetch = function(input, init) {
+    init = init || {};
+    const raw = (typeof input === 'string') ? input : (input && input.url) || '';
+    const method = (init.method || (input && input.method) || 'GET').toUpperCase();
+    // Resolve the URL so this works for relative ("/api/x"), absolute
+    // ("http://host/api/x") and reverse-proxy subpath ("/gateway/api/x")
+    // forms alike — the old `indexOf('/api/') === 0` check silently dropped
+    // the token for anything that wasn't a bare relative path, which the
+    // server then rejected as "CSRF token invalido".
+    let path = raw, sameOrigin = true;
+    try {
+      const u = new URL(raw, window.location.origin);
+      path = u.pathname;
+      sameOrigin = (u.origin === window.location.origin);
+    } catch (e) { /* keep raw string on parse failure */ }
+    if (CSRF_TOKEN && method !== 'GET' && sameOrigin && path.indexOf('/api/') !== -1) {
+      init.headers = Object.assign({}, init.headers || {}, {'X-CSRF-Token': CSRF_TOKEN});
+    }
+    return _origFetch(input, init);
+  };
+})();
+
+// ── Service status polling ─────────────────────────────────────────
+async function pollStatus() {
+  try {
+    const r = await fetch('/api/status');
+    const d = await r.json();
+    const dot  = document.getElementById('svc-dot');
+    const text = document.getElementById('svc-text');
+    const svc  = d.service_systemd || 'unknown';
+    // systemd answer, or (no systemd, e.g. a dev PC) the freshness of status.json
+    var on = svc === 'active' || (svc !== 'inactive' && svc !== 'failed' && d.running &&
+             d.updated_at && (Date.now() - new Date(d.updated_at).getTime()) < 660000);
+    var badge = document.getElementById('svc-badge');
+    badge.className = on ? 'on' : 'off';
+    dot.className  = 'dot ' + (on ? 'green' : 'red');
+    text.textContent = on ? T('Gateway acceso') : T('Gateway spento');
+    if (window._onStatusUpdate) window._onStatusUpdate(d);
+  } catch(e) {}
+}
+pollStatus();
+setInterval(pollStatus, 5000);
+
+// ── Pending devices badge polling ──────────────────────────────────
+async function pollPendingDevices() {
+  try {
+    const r = await fetch('/api/devices/discovered');
+    const d = await r.json();
+    const el = document.getElementById('pending-devices-badge');
+    if (!el) return;
+    const n = (d.pending || []).length;
+    if (n > 0) {
+      el.textContent = n;
+      el.style.display = 'inline-block';
+      el.title = T('{n} nuovi apparecchi trovati — apri Analizzatori per attivarli', {n: n});
+    } else {
+      el.style.display = 'none';
+    }
+  } catch(e) {}
+}
+pollPendingDevices();
+setInterval(pollPendingDevices, 15000);
+
+// ── PWA + command palette ─────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/service_worker.js').catch(() => {});
+}
+(function() {
+  const s = document.createElement('script');
+  s.src = '/static/command_palette.js';
+  s.defer = true;
+  document.head.appendChild(s);
+  const dm = document.createElement('script');
+  dm.src = '/static/dark_mode.js';
+  dm.defer = true;
+  document.head.appendChild(dm);
+  const link = document.createElement('link');
+  link.rel = 'manifest';
+  link.href = '/static/manifest.webmanifest';
+  document.head.appendChild(link);
+})();
+
+// ── DLQ badge polling ──────────────────────────────────────────────
+async function pollDlq() {
+  try {
+    const r = await fetch('/api/dlq?limit=1');
+    if (r.status === 403) return;   // viewer can't see DLQ
+    const d = await r.json();
+    const el = document.getElementById('dlq-badge');
+    if (!el) return;
+    const n = (d.entries || []).length > 0
+      ? await fetch('/api/dlq?limit=200').then(x => x.json()).then(x => (x.entries||[]).length)
+      : 0;
+    const hd = document.getElementById('hdr-dlq');
+    if (hd) {
+      hd.style.display = n > 0 ? '' : 'none';
+      document.getElementById('hdr-dlq-text').textContent = T('{n} risultati in attesa', {n: n});
+    }
+    if (n > 0) {
+      el.textContent = n; el.style.display = 'inline-block';
+      el.title = T('{n} messaggi da rispedire', {n: n});
+    } else {
+      el.style.display = 'none';
+    }
+    if (window._onDlqCount) window._onDlqCount(n);
+  } catch(e) {}
+}
+pollDlq();
+setInterval(pollDlq, 30000);
+
+
+// ── Toast ──────────────────────────────────────────────────────────
+function toast(msg, type='info') {
+  const el = document.getElementById('toast');
+  const styles = getComputedStyle(document.documentElement);
+  const bg = type === 'error' ? styles.getPropertyValue('--red') : styles.getPropertyValue('--text');
+  el.style.background = bg.trim() || '#1d1f20';
+  el.style.border = '0';
+  el.style.color = styles.getPropertyValue('--bg').trim() || '#f2f2f3';
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.style.display = 'none', 3800);
+}
+</script>
+
+<script>
+// ── Live area: re-rendered by the server, already translated ─────────────
+async function ovRefresh() {
+  try {
+    var r = await fetch('/overview/live', {credentials: 'same-origin'});
+    if (!r.ok) return;
+    var html = await r.text();
+    var box = document.getElementById('ov-live');
+    if (box && box.innerHTML.trim() !== html.trim()) box.innerHTML = html;
+  } catch (e) { /* network hiccup: keep showing the last state */ }
+}
+setInterval(ovRefresh, 15000);
+
+async function ovStartGateway(btn) {
+  btn.disabled = true;
+  toast(T('Avvio…'));
+  try {
+    var r = await fetch('/api/service/start', {method: 'POST'});
+    var d = await r.json();
+    if (d.ok) toast(T('Gateway acceso'), 'info');
+    else {
+      // The technical reason (e.g. "sudo: a terminal is required") means
+      // nothing to a doctor: say what to do, keep the detail in the console.
+      console.warn('service start failed:', d.error);
+      toast(T("Non è stato possibile accendere il gateway. Spegni e riaccendi la scatola grigia, oppure chiama l'assistenza."), 'error');
+    }
+  } catch (e) {
+    toast(T('Errore di rete: {msg}', {msg: e.message}), 'error');
+  }
+  btn.disabled = false;
+  setTimeout(ovRefresh, 2500);
+}
+
+// ── Technician zone: loads its data only when opened ─────────────────────
+var techZone = document.getElementById('tech-zone');
+var techLoaded = false;
+if (techZone) {
+  techZone.addEventListener('toggle', function () {
+    if (techZone.open && !techLoaded) {
+      techLoaded = true;
+      drawTrend(); caricaEventi(); refreshDiscovered();
+      setInterval(drawTrend, 60000); setInterval(caricaEventi, 30000); setInterval(refreshDiscovered, 15000);
+    }
+  });
+}
+
+window._onStatusUpdate = function (d) {
+  var el = document.getElementById('stat-errors');
+  if (!el) return;
+  el.textContent = d.errors_today || 0;
+  el.className = 'stat-value ' + ((d.errors_today || 0) > 0 ? 'red' : '');
+  document.getElementById('stat-total').textContent = d.results_total || 0;
+  var up = d.uptime_seconds || 0;
+  document.getElementById('stat-uptime').textContent = Math.floor(up / 3600) + 'h ' + Math.floor((up % 3600) / 60) + 'm';
+};
+
+async function serviceAction(action) {
+  var labels = {start: T('Avvio…'), stop: T('Arresto…'), restart: T('Riavvio…')};
+  toast(labels[action] || T('Eseguo…'), 'info');
+  var r = await fetch('/api/service/' + action, {method: 'POST'});
+  var d = await r.json();
+  if (d.ok) toast(T('Fatto. Stato del servizio: {stato}', {stato: d.status}), 'success');
+  else toast(T('Errore: {msg}', {msg: d.error || T('sconosciuto')}), 'error');
+  setTimeout(ovRefresh, 2500);
+}
+
+async function checkUpdate() {
+  var st = document.getElementById('update-status');
+  st.textContent = T('Controllo…');
+  var r = await fetch('/api/update/check', {method: 'POST'});
+  var d = await r.json();
+  if (d.ok) {
+    st.textContent = d.update_available ? T('Aggiornamento disponibile') : T('Software aggiornato');
+    if (d.update_available) document.getElementById('btn-update').style.display = '';
+  } else {
+    st.textContent = T('Errore di rete');
+  }
+}
+
+async function applyUpdate() {
+  toast(T('Aggiornamento in corso…'), 'info');
+  document.getElementById('btn-update').disabled = true;
+  var r = await fetch('/api/update/apply', {method: 'POST'});
+  var d = await r.json();
+  if (d.ok) toast(d.message, 'success');
+  else toast(T('Errore: {msg}', {msg: d.error}), 'error');
+  document.getElementById('btn-update').disabled = false;
+}
+
+async function drawTrend() {
+  var svg = document.getElementById('trend-svg');
+  if (!svg) return;
+  var cs = getComputedStyle(document.documentElement);
+  var c = function (n, f) { return cs.getPropertyValue(n).trim() || f; };
+  var cGrid = c('--line', '#D5DCE1'), cText = c('--ink-3', '#5F6B77');
+  var cOk = c('--brand', '#2C5F8A'), cPart = c('--warn-fill', '#E9A820'), cErr = c('--crit', '#B42318');
+  try {
+    var d = await (await fetch('/api/history/trend?hours=24')).json();
+    var rows = d.hours || [];
+    if (!rows.length) {
+      svg.innerHTML = '<text x="360" y="80" text-anchor="middle" fill="' + cText + '" font-size="14">' + T('nessun dato nelle ultime 24 ore') + '</text>';
+      return;
+    }
+    var W = 720, H = 160, L = 36, R = 6, TOP = 8, B = 22, CW = W - L - R, CH = H - TOP - B;
+    var maxV = Math.max.apply(null, [1].concat(rows.map(function (x) { return x.ok + x.partial + x.err; })));
+    var bw = CW / rows.length * 0.78, gap = CW / rows.length * 0.22, out = '';
+    for (var i = 0; i <= 4; i++) {
+      var y = TOP + CH * i / 4;
+      out += '<line x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '" stroke="' + cGrid + '"/>';
+      out += '<text x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end" fill="' + cText + '" font-size="11">' + Math.round(maxV * (1 - i / 4)) + '</text>';
+    }
+    rows.forEach(function (row, i) {
+      var x = L + i * (bw + gap) + gap / 2, y = TOP + CH;
+      [['err', cErr], ['partial', cPart], ['ok', cOk]].forEach(function (p) {
+        var h = row[p[0]] / maxV * CH;
+        if (h > 0.5) { out += '<rect x="' + x + '" y="' + (y - h) + '" width="' + bw + '" height="' + h + '" fill="' + p[1] + '"><title>' + row.hour + ': ' + row[p[0]] + '</title></rect>'; y -= h + 1; }
+      });
+      if (i % 3 === 0) out += '<text x="' + (x + bw / 2) + '" y="' + (H - 5) + '" text-anchor="middle" fill="' + cText + '" font-size="11">' + (row.hour.split('T')[1] || '') + '</text>';
+    });
+    svg.innerHTML = out;
+  } catch (e) {}
+}
+
+// Recent events: built with textContent (log lines can contain patient ids).
+var RE_LOG = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}):\d{2}\s+\[(\w+)\s*\]\s+[\w.]+:\s*(.*)$/;
+function rigaEvento(ora, livello, testo) {
+  var riga = document.createElement('div');
+  riga.style.cssText = 'display:grid;grid-template-columns:52px 12px minmax(0,1fr);gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);';
+  var o = document.createElement('span'); o.style.cssText = 'font-family:var(--mono);font-size:0.85rem;color:var(--ink-3);'; o.textContent = ora;
+  var p = document.createElement('span'); p.className = 'dot';
+  p.style.background = (livello === 'ERROR' || livello === 'CRITICAL') ? 'var(--crit)' : livello === 'WARNING' ? 'var(--warn-fill)' : 'var(--brand)';
+  var m = document.createElement('span'); m.style.cssText = 'font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; m.textContent = testo; m.title = testo;
+  riga.append(o, p, m);
+  return riga;
+}
+function messaggioVuoto(testo) {
+  var d = document.createElement('div'); d.style.cssText = 'color:var(--ink-3);padding:14px 0;'; d.textContent = testo; return d;
+}
+async function caricaEventi() {
+  var box = document.getElementById('eventi-recenti');
+  if (!box) return;
+  try {
+    var d = await (await fetch('/api/logs?n=80')).json();
+    var righe = (d.lines || []).slice().reverse(), n = 0;
+    box.textContent = '';
+    for (var i = 0; i < righe.length && n < 8; i++) {
+      var m = RE_LOG.exec(righe[i]);
+      if (!m || m[3].indexOf('USB probe') === 0) continue;
+      box.appendChild(rigaEvento(m[1], m[2], m[3])); n++;
+    }
+    if (!n) box.appendChild(messaggioVuoto(T('Nessun evento registrato.')));
+  } catch (e) {
+    box.textContent = ''; box.appendChild(messaggioVuoto(T('Log non disponibili.')));
+  }
+}
+
+var DEVICE_TYPE_OPTIONS = [
+  {value: "loc200_serial",    label: "LOC-200 (RS-232)"},
+  {value: "sysmex_astm",      label: "Sysmex XP-300 / pocH-100i (RS-232)"},
+  {value: "uc1000_serial",    label: "Menarini UC-1000"},
+  {value: "reflotron_serial", label: "Roche Reflotron Plus"},
+  {value: "cobas_poct",       label: "Roche cobas b101"},
+  {value: "mllp_hl7",         label: "HL7 v2 MLLP"},
+];
+function _esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+async function refreshDiscovered() {
+  try {
+    var r = await fetch("/api/devices/discovered", {credentials: "same-origin"});
+    if (!r.ok) return;
+    var data = await r.json();
+    var pending = (data.pending || []).filter(function (d) { return !d.activated; });
+    var card = document.getElementById("discovered-card");
+    if (!pending.length) { card.style.display = "none"; return; }
+    card.style.display = "block";
+    document.getElementById("discovered-count").textContent = T("{n} da assegnare", {n: pending.length});
+    document.getElementById("discovered-list").innerHTML = pending.map(function (d, i) {
+      var key = d.key || (d.source + ":" + d.location);
+      var opts = DEVICE_TYPE_OPTIONS.map(function (o) {
+        return '<option value="' + o.value + '"' + (o.value === d.device_type ? ' selected' : '') + '>' + _esc(o.label) + '</option>';
+      }).join('');
+      return '<div style="border-top:1px solid var(--line);padding:12px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;">' +
+        '<div><strong>' + _esc(d.display_name || d.vendor || d.chip || T("dispositivo generico")) + '</strong><br>' +
+        '<span style="color:var(--ink-3);font-size:0.9rem;">' + _esc(d.location) + ' ' + _esc(d.usb_id || '') + '</span></div>' +
+        '<div style="display:flex;gap:8px;"><select id="dt-' + i + '" class="form-input" style="width:260px;">' + opts + '</select>' +
+        '<button class="btn btn-primary" data-key="' + _esc(key) + '" onclick="assignDiscovered(this.dataset.key, \'dt-' + i + '\')">' + T("Assegna") + '</button></div></div>';
+    }).join('');
+  } catch (e) {}
+}
+async function assignDiscovered(key, selectId) {
+  var sel = document.getElementById(selectId);
+  if (!sel || !sel.value) { toast(T("Scegli un tipo di analizzatore."), "error"); return; }
+  try {
+    var r = await fetch("/api/devices/activate", {method: "POST", credentials: "same-origin",
+      headers: {"Content-Type": "application/json"}, body: JSON.stringify({key: key, device_type: sel.value})});
+    var data = await r.json();
+    if (data.ok) { toast(T("Assegnato. Riavvia il gateway (Controllo servizio → Riavvia) per attivare il nuovo device."), "success"); refreshDiscovered(); }
+    else toast(T("Errore: {msg}", {msg: data.error || T("operazione non riuscita")}), "error");
+  } catch (e) { toast(T("Errore di rete: {msg}", {msg: e.message}), "error"); }
+}
+</script>
+
+<script>setTimeout(function(){
+  var W = window.innerWidth, out = {w: W, sw: document.documentElement.scrollWidth, off: [], overlap: [], clipped: []};
+  document.querySelectorAll('body *').forEach(function(el){
+    var r = el.getBoundingClientRect(); if (!r.width || !r.height) return;
+    var cs = getComputedStyle(el); if (cs.visibility==='hidden') return;
+    if (r.right > W + 1 || r.left < -1) {
+      // ignore if an ancestor clips with overflow
+      var p = el.parentElement, clipped = false;
+      while (p && p !== document.body) { var o = getComputedStyle(p).overflowX; if (o==='auto'||o==='hidden'||o==='scroll') { clipped = (typeof p.className==='string'?p.className:'')||p.tagName; break;} p = p.parentElement; }
+      if (!clipped) out.off.push((el.id||(typeof el.className==='string'?el.className:'svg')||el.tagName).toString().slice(0,40) + ' r=' + Math.round(r.right));
+      else out.clipped.push((el.id||(typeof el.className==='string'?el.className:'svg')||el.tagName).toString().slice(0,30) + ' in ' + clipped.toString().slice(0,20));
+    }
+    if (el.scrollWidth > el.clientWidth + 1 && ['visible'].indexOf(cs.overflowX)>=0 && el.clientWidth>0 && !/svg|path|circle|text/i.test(el.tagName)) out.clipped.push('OVERFLOWING ' + (el.id||(typeof el.className==='string'?el.className:'svg')||el.tagName).toString().slice(0,30) + ' ' + el.scrollWidth + '>' + el.clientWidth);
+  });
+  var hdr = document.querySelector('header'); 
+  if (hdr) { var kids = Array.from(hdr.querySelectorAll('*')).filter(function(e){var r=e.getBoundingClientRect(); return r.width>0 && e.children.length===0;});
+    for (var i=0;i<kids.length;i++) for (var j=i+1;j<kids.length;j++){ var a=kids[i].getBoundingClientRect(), b=kids[j].getBoundingClientRect();
+      if (kids[i].contains(kids[j])||kids[j].contains(kids[i])) continue;
+      var ox = Math.min(a.right,b.right)-Math.max(a.left,b.left), oy=Math.min(a.bottom,b.bottom)-Math.max(a.top,b.top);
+      if (ox>2&&oy>2) out.overlap.push((kids[i].id||(typeof kids[i].className==='string'?kids[i].className:'svg:'+kids[i].parentElement.className)||kids[i].tagName)+' x '+(kids[j].id||(typeof kids[j].className==='string'?kids[j].className:'svg:'+kids[j].parentElement.className)||kids[j].tagName)); } }
+  out.hdrH = hdr ? Math.round(hdr.getBoundingClientRect().height) : 0;
+  parent.postMessage(JSON.stringify(out), '*');
+}, 800);
+</script></body>
+</html>

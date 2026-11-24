@@ -1,0 +1,38 @@
+name: chaos-weekly
+
+on:
+  schedule:
+    - cron: '30 2 * * 6'   # Saturday 02:30 CET
+  workflow_dispatch:
+
+jobs:
+  chaos:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.11'}
+      - run: pip install -r requirements-dev.txt
+      - name: Start gateway with sandbox devices
+        run: python -m src.main --config=config/gateway.demo.yaml &
+        env: {DEMO_MODE: '1'}
+      - run: sleep 5
+
+      - name: Kill DLQ writer mid-flight
+        run: bash chaos/kill_dlq_writer.sh
+      - name: Fill disk to 95%
+        run: bash chaos/fill_disk.sh 95
+      - name: Sever LIS network
+        run: bash chaos/sever_lis.sh
+      - name: Corrupt half a frame
+        run: bash chaos/corrupt_frame.sh
+
+      - name: Verify recovery within 60s
+        run: python tools/verify_recovery.py --timeout=60
+
+      - name: Post-mortem report
+        if: always()
+        run: python tools/chaos_report.py > chaos-report.md
+      - uses: actions/upload-artifact@v4
+        with: {name: chaos-report, path: chaos-report.md}

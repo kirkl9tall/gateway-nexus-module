@@ -1,0 +1,43 @@
+[Unit]
+Description=JerumedNexus Gateway Web UI (Flask)
+Documentation=https://github.com/jerumed-nexus/jerumednexus-gateway
+After=network-online.target jerumednexus-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__INSTALL_DIR__
+EnvironmentFile=-__INSTALL_DIR__/config/secrets.env
+# Same anchor as the gateway service — makes every config/, logs/ path
+# absolute regardless of who launched the process.
+Environment=JMNX_INSTALL_ROOT=__INSTALL_DIR__
+Environment=PYTHONPATH=__INSTALL_DIR__
+# Requires pyOpenSSL for Flask's HTTPS support; pip-installed via requirements.txt.
+ExecStart=__INSTALL_DIR__/.venv/bin/python -m webui.serve
+Restart=on-failure
+RestartSec=10s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jerumednexus-webui
+
+# ── systemd hardening ─────────────────────────────────────────────
+# NOTE: the Web UI must control the gateway service via
+# `sudo systemctl start/stop/restart jerumednexus-gateway` (see the
+# /etc/sudoers.d rule the installer writes). `sudo` cannot escalate when
+# `no_new_privs` is set on the process, and options like
+# ProtectKernelModules / RestrictSUIDSGID / LockPersonality IMPLY
+# NoNewPrivileges=yes. So those are deliberately omitted here — otherwise
+# the Start/Stop/Restart buttons fail with:
+#   "sudo: The 'no new privileges' flag is set, which prevents sudo from
+#    running as root".
+# Filesystem protections that do NOT imply no_new_privs are kept.
+NoNewPrivileges=no
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__INSTALL_DIR__/logs __INSTALL_DIR__/config
+
+[Install]
+WantedBy=multi-user.target

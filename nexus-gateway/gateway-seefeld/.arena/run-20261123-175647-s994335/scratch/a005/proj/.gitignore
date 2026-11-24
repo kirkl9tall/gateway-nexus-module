@@ -1,0 +1,72 @@
+# ── Segreti e configurazione di produzione ────────────────────────────────
+# Non devono MAI finire nel repository: sono diversi per ogni studio e
+# contengono credenziali. Nel repo restano solo i file .example.
+config/gateway.yaml
+config/secrets.env
+config/known_hosts
+config/dlq_key
+config/license.json
+config/webui_password.hash
+config/webui_users.json
+config/webui_users.json.tmp
+config/webui_secret.key
+config/webui_cert.pem
+config/webui_key.pem
+*.pem
+*.key
+!**/*.example
+!**/*.yaml.example
+
+# ── Dati di esercizio ─────────────────────────────────────────────────────
+logs/
+*.log
+*.db
+*.sqlite
+*.sqlite3
+history.db*
+
+# ── Python ────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+*.egg-info/
+.eggs/
+
+# ── Test e qualità ────────────────────────────────────────────────────────
+.pytest_cache/
+.hypothesis/
+.benchmarks/
+.coverage
+coverage.json
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ── Build e pacchetti ─────────────────────────────────────────────────────
+build/
+dist/
+*.deb
+*.buildinfo
+*.changes
+debian/.debhelper/
+debian/files
+debian/jerumednexus-gateway/
+
+# ── Sistema operativo ed editor ───────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*~
+
+# ── Varie ─────────────────────────────────────────────────────────────────
+node_modules/
+site/
+.demo-credenziali-locali.txt
+config/webui_users.json.bak*

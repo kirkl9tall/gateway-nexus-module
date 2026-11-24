@@ -1,0 +1,18 @@
+id: biorad_d100
+type: mllp_hl7    # verified: D-100 bi-directional HL7 tramite Data Manager module
+enabled: false
+display_name: "Bio-Rad D-100 (HbA1c)"
+vendor: Bio-Rad
+model: D-100
+listen_host: "0.0.0.0"
+listen_port: 5040
+notes: |
+  HPLC per HbA1c. Standard nei laboratori di diabetologia DACH.
+  Protocollo verificato (fonte: Bio-Rad D-100 datasheet + D-10 LIS Interface Guide):
+    - D-100: bi-directional HL7 v2 (auto-review con flag/release)
+    - D-10 (variante piu' vecchia): LIS1-A / LIS2-A (ASTM) via RS-232
+    - Trasmissione automatica risultati a LIS
+  Per D-10 esiste profilo separato biorad_d10 con type: sysmex_astm.
+  Fonti:
+    - https://www.bio-rad.com/en-us/product/d-100-hemoglobin-testing-system
+    - https://www.scribd.com/document/475859984/D-10-LIS-manual

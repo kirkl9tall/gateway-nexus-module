@@ -1,0 +1,11 @@
+id: radiometer_abl80
+type: mllp_hl7
+enabled: false
+display_name: "Radiometer ABL80 FLEX (Blood Gas)"
+vendor: Radiometer
+model: ABL80 FLEX
+listen_host: "0.0.0.0"
+listen_port: 5050
+notes: |
+  Analizzatore emogas / elettroliti / metaboliti. Standard in emergency + reparti critici.
+  Protocollo: HL7 v2 MLLP tramite AQURE / RADIANCE middleware.

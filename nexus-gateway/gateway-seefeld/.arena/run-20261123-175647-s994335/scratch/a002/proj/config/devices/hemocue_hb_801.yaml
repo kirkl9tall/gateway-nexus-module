@@ -1,0 +1,10 @@
+id: hemocue_hb_801
+type: mllp_hl7
+enabled: false
+display_name: "HemoCue Hb 801 (Emoglobina)"
+vendor: HemoCue
+model: Hb 801
+listen_host: "0.0.0.0"
+listen_port: 5031
+notes: |
+  Emoglobina POCT. Molto diffuso in praxis DACH per anemia screening.

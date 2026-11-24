@@ -1,0 +1,10 @@
+id: roche_cobas_h232
+type: cobas_poct
+enabled: false
+display_name: "Roche Cobas h 232 (Kardiomarker POCT)"
+vendor: Roche
+model: Cobas h 232
+serial_port: "/dev/ttyACM1"
+notes: |
+  POCT per marker cardiaci (Troponin T, NT-proBNP, D-Dimer, CK-MB, Myoglobin).
+  Protocollo: POCT1-A2 su USB CDC seriale.

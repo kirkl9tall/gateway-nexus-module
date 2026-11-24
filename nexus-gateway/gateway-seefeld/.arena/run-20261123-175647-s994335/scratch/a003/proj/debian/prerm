@@ -1,0 +1,12 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    remove|upgrade|deconfigure)
+        systemctl stop jerumednexus-gateway.service jerumednexus-webui.service || true
+        systemctl disable jerumednexus-gateway.service jerumednexus-webui.service || true
+        ;;
+    failed-upgrade)
+        ;;
+esac
+exit 0

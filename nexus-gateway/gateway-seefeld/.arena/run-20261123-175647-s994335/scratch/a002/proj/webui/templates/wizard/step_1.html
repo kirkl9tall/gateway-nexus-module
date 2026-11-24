@@ -1,0 +1,71 @@
+{% extends "wizard/base.html" %}
+{% block form %}
+<h2><span class="step-icon">1</span>Praxis / Studio</h2>
+<p class="intro">Iniziamo con qualche informazione base sul tuo studio.</p>
+<form method="post">
+  <label>Lingua interfaccia</label>
+  <select name="language">
+    <option value="de" {% if (data.language or current_lang()) == 'de' %}selected{% endif %}>Deutsch</option>
+    <option value="it" {% if (data.language or current_lang()) == 'it' %}selected{% endif %}>Italiano</option>
+    <option value="fr" {% if (data.language or current_lang()) == 'fr' %}selected{% endif %}>Français</option>
+    <option value="en" {% if (data.language or current_lang()) == 'en' %}selected{% endif %}>English</option>
+  </select>
+
+  <label>Nome dello studio <small>(compare nei messaggi HL7 come "facility")</small></label>
+  <input type="text" name="facility_name" required
+         placeholder="es. Hausarztpraxis Rossi"
+         value="{{ data.facility_name or '' }}">
+
+  <label class="lbl" for="recipient_name">Destinatario del referto (MSH-6)</label>
+  <input type="text" name="recipient_name" id="recipient_name"
+         placeholder="es. Dr. A Rossi"
+         value="{{ data.recipient_name or '' }}">
+  <div class="hint">
+    A chi e indirizzato il referto, di solito il nome del medico. Il gestionale
+    lo usa per riconoscere i referti: se coincide con il nome dello studio qui
+    sopra, i file arrivano ma non vengono assegnati ai pazienti.
+  </div>
+
+  <label>Città</label>
+  <input type="text" name="facility_city"
+         placeholder="es. Zürich"
+         value="{{ data.facility_city or '' }}">
+
+  <label>Fuso orario</label>
+  <select name="timezone">
+    <option value="Europe/Zurich" {% if data.timezone == 'Europe/Zurich' %}selected{% endif %}>Europe/Zurich (CH)</option>
+    <option value="Europe/Berlin" {% if data.timezone == 'Europe/Berlin' %}selected{% endif %}>Europe/Berlin (DE)</option>
+    <option value="Europe/Vienna" {% if data.timezone == 'Europe/Vienna' %}selected{% endif %}>Europe/Vienna (AT)</option>
+    <option value="Europe/Rome" {% if data.timezone == 'Europe/Rome' %}selected{% endif %}>Europe/Rome (IT)</option>
+  </select>
+
+  <div class="actions">
+    <div></div>
+    <button type="submit" class="btn btn-primary">Avanti →</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block help %}
+<h3>💡 Cosa fa questo passo</h3>
+<p>Registri qui il nome della tua praxis e la lingua che vuoi usare nel pannello.</p>
+<p>Il nome dello studio verrà scritto in ogni messaggio HL7 che il gateway invia al gestionale medico. Serve al LIS per capire da quale praxis arrivano i risultati.</p>
+
+<div class="callout">
+  <b>Assicurati di:</b>
+  <ul>
+    <li>Scrivere il nome dello studio <b>senza caratteri speciali</b> (no <kbd>|</kbd> <kbd>^</kbd> <kbd>~</kbd>)</li>
+    <li>Scegliere il fuso orario corretto — sbagliarlo significa avere gli orari sbagliati nelle refertazioni</li>
+  </ul>
+</div>
+
+<h3>📋 Cosa succede dopo</h3>
+<ol>
+  <li>Crei l'utente amministratore</li>
+  <li>Verifichi la rete</li>
+  <li>Aggiungi il primo analizzatore</li>
+  <li>Collega il primo gestionale (LIS)</li>
+  <li>Configuri il backup</li>
+  <li>Verifica finale + avvio</li>
+</ol>
+{% endblock %}

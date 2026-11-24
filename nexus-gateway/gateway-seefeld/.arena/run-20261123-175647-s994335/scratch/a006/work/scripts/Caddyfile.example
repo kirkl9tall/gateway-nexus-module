@@ -1,0 +1,54 @@
+# /etc/caddy/Caddyfile -- example for JerumedNexus Gateway HTTPS
+#
+# Modes:
+#   * Public FQDN with Let's Encrypt (recommended):
+#       Replace "gateway.example.ch" with your DNS name; Caddy handles ACME.
+#   * Local-only self-signed:
+#       Uncomment the "tls internal" line and use "https://<pi-ip>".
+#
+# Install:
+#   sudo apt install caddy
+#   sudo cp scripts/Caddyfile.example /etc/caddy/Caddyfile
+#   sudo systemctl restart caddy
+#   Then edit config/gateway.yaml -> set WEBUI_HTTPS=1 in secrets.env so
+#   session cookies get the Secure flag.
+
+gateway.example.ch {
+    # tls internal            # <-- uncomment for local-only self-signed
+
+    encode gzip
+
+    # Serve /metrics only over LAN (adjust CIDR)
+    @lan_only {
+        remote_ip 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 127.0.0.0/8
+    }
+    handle /metrics {
+        respond @lan_only 403
+        reverse_proxy 127.0.0.1:8080
+    }
+
+    # JerumedNexus HTTP ingestion (Bearer token still required by the app)
+    handle_path /ingest/* {
+        reverse_proxy 127.0.0.1:5003
+    }
+
+    # Everything else -> Flask Web UI
+    handle {
+        reverse_proxy 127.0.0.1:8080 {
+            header_up X-Forwarded-For {remote_host}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
+
+    header {
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        X-Frame-Options DENY
+        X-Content-Type-Options nosniff
+        Referrer-Policy strict-origin-when-cross-origin
+    }
+
+    log {
+        output file /var/log/caddy/jerumednexus.log
+        format json
+    }
+}

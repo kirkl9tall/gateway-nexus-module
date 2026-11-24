@@ -1,0 +1,57 @@
+# SLO/SLI definitions for JerumedNexus Gateway.
+#
+# Each SLI is a Prometheus expression (uses the same metric names as /metrics).
+# Each SLO gives the target and evaluation window; the evaluator (src/common/slo.py)
+# reports compliance + burn rate per window.
+
+slos:
+  - name: dispatch_success_rate
+    description: >
+      Percentage of messages successfully delivered to at least one target
+      within the target's own timeout.
+    sli_expr:  "sum(rate(jerumednexus_messages_dispatched{success='true'}[5m])) /
+                sum(rate(jerumednexus_messages_dispatched[5m]))"
+    target: 0.999            # 99.9%
+    window: 30d              # rolling 30-day window
+    severity: high
+
+  - name: gateway_availability
+    description: Fraction of time the gateway is running (systemd active + internal loop).
+    sli_expr:  "avg_over_time(jerumednexus_up[5m]) * avg_over_time(jerumednexus_running[5m])"
+    target: 0.999
+    window: 30d
+    severity: critical
+
+  - name: ingest_latency_p99
+    description: p99 latency from HL7 ingest to dispatch, must stay under 5s.
+    sli_expr:  "histogram_quantile(0.99, sum(rate(jerumednexus_dispatch_latency_bucket[5m])) by (le))"
+    target_lt: 5000          # milliseconds
+    window: 7d
+    severity: medium
+
+  - name: queue_backpressure_events
+    description: Fraction of 5-minute buckets in which the queue never filled up.
+    sli_expr:  "avg_over_time((jerumednexus_queue_full_events == bool 0)[5m:])"
+    target: 0.995
+    window: 30d
+    severity: medium
+
+  - name: device_freshness
+    description: Fraction of enabled devices reporting a frame within the last hour.
+    sli_expr:  "avg((time() - jerumednexus_device_last_seen_seconds) < 3600)"
+    target: 0.99
+    window: 7d
+    severity: high
+
+error_budgets:
+  # Auto-computed: (1 - target) * window in seconds/messages
+  # Alert when we've burned >2% of budget in an hour, or >10% in a day.
+  burn_alerts:
+    - name: fast_burn
+      windows: [1h, 6h]
+      factor:  14.4          # 2% of 30d in 1h
+      severity: page
+    - name: slow_burn
+      windows: [24h, 3d]
+      factor:  6.0           # 10% of 30d in 24h
+      severity: ticket

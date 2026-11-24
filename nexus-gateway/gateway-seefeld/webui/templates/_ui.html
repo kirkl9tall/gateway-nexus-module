@@ -1,0 +1,55 @@
+{# Shared UI pieces. Status = colour + icon SHAPE + word, never colour alone
+   (docs/UI-DESIGN-ARENA.md). #}
+
+{% macro status_icon(level) -%}
+{%- if level == 'good' -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="11" fill="currentColor"/><path d="M7 12.5l3.2 3.2L17 9" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+{%- elif level == 'warning' -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.8L23 21.5H1z" fill="var(--warn-fill)" stroke="var(--warn)" stroke-width="1.2" stroke-linejoin="round"/><path d="M12 8.5v6" stroke="#17202A" stroke-width="2.6" stroke-linecap="round"/><circle cx="12" cy="18" r="1.5" fill="#17202A"/></svg>
+{%- elif level == 'critical' -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.4 1h9.2L23 7.4v9.2L16.6 23H7.4L1 16.6V7.4z" fill="currentColor"/><path d="M8.2 8.2l7.6 7.6M15.8 8.2l-7.6 7.6" stroke="#fff" stroke-width="2.6" stroke-linecap="round"/></svg>
+{%- else -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M9.5 8v8M14.5 8v8" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>
+{%- endif -%}
+{%- endmacro %}
+
+{% macro chip(level, text) -%}
+<span class="chip {{ level }}">{{ status_icon(level) }}{{ text }}</span>
+{%- endmacro %}
+
+{# Tube glyph: identifies "a lab machine" without colour coding #}
+{% macro machine_icon() -%}
+<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M9 2.5h6"/><path d="M10 2.5v15a2 2 0 0 0 4 0v-15"/><path d="M10 11h4"/></svg>
+{%- endmacro %}
+
+{% macro link_label(link) -%}
+{%- if link == 'usb' -%}{{ t("Cavo USB") }}{%- elif link == 'network' -%}{{ t("Cavo di rete") }}{%- elif link == 'folder' -%}{{ t("Cartella condivisa") }}{%- else -%}{{ t("Collegamento da completare") }}{%- endif -%}
+{%- endmacro %}
+
+{% macro machine_state_text(m) -%}
+{%- if m.state == 'online' -%}{{ t("Collegato") }}
+{%- elif m.state == 'idle' -%}{{ t("In attesa di analisi") }}
+{%- elif m.state == 'waiting' -%}{{ t("Mai sentito") }}
+{%- elif m.state == 'offline' -%}{{ t("Cavo non rilevato") }}
+{%- else -%}{{ t("Gateway spento") }}{%- endif -%}
+{%- endmacro %}
+
+{% macro machine_hint(m) -%}
+{%- if m.state == 'offline' -%}{{ t("Controlla che il cavo USB sia inserito e che l'apparecchio sia acceso.") }}
+{%- elif m.state == 'waiting' -%}{{ t("Non ha ancora inviato nessun risultato. Invia un risultato di prova dall'apparecchio.") }}
+{%- elif m.last_result -%}{{ t("Ultimo risultato {quando}", quando=m.last_result|when) }}
+{%- elif m.last_connect -%}{{ t("Ultimo contatto {quando}", quando=m.last_connect|when) }}
+{%- else -%}{{ t("Nessun risultato finora.") }}{%- endif -%}
+{%- endmacro %}
+
+{% macro product_label(d) -%}
+{%- if d.product == 'folder' -%}{{ t("Cartella condivisa") }}{%- elif d.product == 'software' -%}{{ t("Software dello studio") }}{%- else -%}{{ d.product }}{%- endif -%}
+{%- endmacro %}
+
+{% macro dest_state_text(d) -%}
+{%- if d.state == 'receiving' -%}{{ t("Riceve i risultati") }}
+{%- elif d.state == 'waiting' -%}{{ t("{n} in attesa", n=d.waiting) }}
+{%- elif d.state == 'unreachable' -%}{{ t("Non raggiungibile") }}
+{%- elif d.state == 'paused' -%}{{ t("Gateway spento") }}
+{%- else -%}{{ t("Pronto") }}{%- endif -%}
+{%- endmacro %}

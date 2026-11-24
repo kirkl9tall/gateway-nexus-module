@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+{% block title %}Topology — JerumedNexus{% endblock %}
+{% block content %}
+<style>
+  .topo-wrap { padding: 20px; background: #0f172a; border-radius: 12px; margin: 20px 0; }
+  .topo-legend { display: flex; gap: 20px; font-size: 0.85rem; color: #cbd5e1; margin-bottom: 12px; }
+  .topo-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  #topo-svg { width: 100%; height: 480px; background: #1e293b; border-radius: 6px; }
+  .node-box { fill: #334155; stroke: #64748b; stroke-width: 1.5; rx: 8; ry: 8; }
+  .node-box.ok { stroke: #22c55e; }
+  .node-box.warn { stroke: #eab308; }
+  .node-box.error { stroke: #ef4444; }
+  .node-label { fill: #f1f5f9; font-size: 12px; font-weight: 600; text-anchor: middle; }
+  .node-sub { fill: #94a3b8; font-size: 10px; text-anchor: middle; }
+  .arrow { stroke: #475569; stroke-width: 2; fill: none; marker-end: url(#arrowhead); }
+  .flow-dot { fill: #06b6d4; }
+  .flow-dot.error { fill: #ef4444; }
+</style>
+
+<h1>Live Topology</h1>
+<div class="topo-legend">
+  <span><span class="dot" style="background:#22c55e"></span>Attivo</span>
+  <span><span class="dot" style="background:#eab308"></span>Ritardo</span>
+  <span><span class="dot" style="background:#ef4444"></span>Errore</span>
+  <span><span class="dot" style="background:#06b6d4"></span>Flusso dati</span>
+</div>
+
+<div class="topo-wrap">
+  <svg id="topo-svg" viewBox="0 0 900 480" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrowhead" viewBox="0 0 10 10" refX="10" refY="5"
+              markerWidth="6" markerHeight="6" orient="auto">
+        <path d="M0,0 L10,5 L0,10 Z" fill="#475569"/>
+      </marker>
+    </defs>
+    <g id="devices"></g>
+    <g id="paths"></g>
+    <rect x="380" y="200" width="140" height="80" class="node-box ok"/>
+    <text x="450" y="235" class="node-label">JerumedNexus</text>
+    <text x="450" y="255" class="node-sub">Gateway v1.3.0</text>
+    <g id="targets"></g>
+    <g id="flows"></g>
+  </svg>
+</div>
+
+<div style="font-size:0.85rem;color:#64748b;text-align:center;">
+  Snapshot ogni secondo via Server-Sent Events. Ogni pallino ciano = un risultato in transito.
+</div>
+
+<script>
+const svg = document.getElementById('topo-svg');
+const devicesG = document.getElementById('devices');
+const targetsG = document.getElementById('targets');
+const pathsG = document.getElementById('paths');
+const flowsG = document.getElementById('flows');
+
+function render(snap) {
+  devicesG.innerHTML = '';
+  targetsG.innerHTML = '';
+  pathsG.innerHTML = '';
+  const devices = snap.devices || [];
+  const targets = snap.targets || [];
+  const dY = 480 / Math.max(1, devices.length + 1);
+  devices.forEach((d, i) => {
+    const y = dY * (i + 0.5);
+    const cls = d.state === 'ok' || d.state === 'connected' ? 'ok'
+              : d.state === 'offline' ? 'error' : 'warn';
+    devicesG.innerHTML += `
+      <rect x="30" y="${y - 25}" width="180" height="50" class="node-box ${cls}"/>
+      <text x="120" y="${y - 5}" class="node-label">${d.name}</text>
+      <text x="120" y="${y + 12}" class="node-sub">${d.state}</text>
+    `;
+    pathsG.innerHTML += `<path d="M 210 ${y} Q 300 ${y}, 380 240" class="arrow"/>`;
+  });
+  const tY = 480 / Math.max(1, targets.length + 1);
+  targets.forEach((t, i) => {
+    const y = tY * (i + 0.5);
+    const cls = t.state === 'closed' ? 'ok'
+              : t.state === 'half_open' ? 'warn' : 'error';
+    targetsG.innerHTML += `
+      <rect x="690" y="${y - 25}" width="180" height="50" class="node-box ${cls}"/>
+      <text x="780" y="${y - 5}" class="node-label">${t.name}</text>
+      <text x="780" y="${y + 12}" class="node-sub">P95 ${Math.round(t.p95_ms)}ms · ${t.state}</text>
+    `;
+    pathsG.innerHTML += `<path d="M 520 240 Q 600 ${y}, 690 ${y}" class="arrow"/>`;
+  });
+  // Animated flows: for each recent flow, draw an animated dot on the arrow.
+  (snap.flows || []).forEach((f, i) => {
+    const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    dot.setAttribute('r', '5');
+    dot.setAttribute('class', 'flow-dot' + (f.status === 'ok' ? '' : ' error'));
+    dot.innerHTML = `
+      <animateMotion dur="1.5s" repeatCount="1" fill="freeze">
+        <mpath xlink:href="#flowpath${i}"/>
+      </animateMotion>
+    `;
+    flowsG.appendChild(dot);
+    setTimeout(() => dot.remove(), 1600);
+  });
+}
+
+const es = new EventSource('/api/topology/stream');
+es.onmessage = (e) => { try { render(JSON.parse(e.data)); } catch (err) {} };
+es.onerror = () => { setTimeout(() => location.reload(), 5000); };
+</script>
+{% endblock %}

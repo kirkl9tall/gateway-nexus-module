@@ -1,0 +1,13 @@
+id: pixcell_hemoscreen
+type: mllp_hl7
+enabled: false
+display_name: "PixCell HemoScreen (POCT CBC)"
+vendor: PixCell Medical
+model: HemoScreen
+listen_host: "0.0.0.0"
+listen_port: 5062
+notes: |
+  CBC 5-diff POCT compatto (cartridge-based). Ideale per praxis singole.
+  Protocollo verificato (fonte: senaite.astm README): HL7 v2 su MLLP.
+  Trasmette ORU^R01 direttamente al Pi senza middleware intermediario.
+  Fonte: https://github.com/senaite/senaite.astm

@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}{{ t("Panoramica") }} — JerumedNexus{% endblock %}
+{% block page_header %}{% endblock %}
+
+{% block content %}
+{% set dl = days_left if days_left is defined else none %}
+{% if dl is not none and dl <= 30 %}
+<div class="alert alert-warn">
+  <span>
+  {% if dl <= 0 %}
+    <strong>{{ t("Licenza scaduta") }}</strong> — {{ t("il gateway continua a funzionare ma non riceve aggiornamenti. Contattare il rivenditore.") }}
+  {% else %}
+    <strong>{{ t("Licenza in scadenza") }}</strong> — <strong>{{ t("mancano {n} giorni", n=dl) }}</strong>.
+    <a href="/license" style="margin-left:8px;">{{ t("Vai al rinnovo") }}</a>
+  {% endif %}
+  </span>
+</div>
+{% endif %}
+
+{# For everybody: rendered here and refreshed every 15 s from /overview/live #}
+<div id="ov-live">{% include "_overview_live.html" %}</div>
+
+{# ── For the technician: always at the bottom, closed by default ── #}
+<details class="tech-zone tech-only" id="tech-zone">
+  <summary>{{ t("Dettagli per il tecnico") }} <small>{{ t("errori, tempi, eventi, servizio, aggiornamenti") }}</small></summary>
+  <div class="tech-zone-body">
+
+    <div class="grid-4">
+      <div class="stat"><div class="stat-label">{{ t("Errori oggi") }}</div>
+        <div class="stat-value {% if status.errors_today > 0 %}red{% endif %}" id="stat-errors">{{ status.errors_today }}</div>
+        <div class="stat-sub">{{ t("trasmissioni fallite") }}</div></div>
+      <div class="stat"><div class="stat-label">{{ t("Totale storico") }}</div>
+        <div class="stat-value" id="stat-total">{{ status.results_total }}</div>
+        <div class="stat-sub">{{ t("dall'installazione") }}</div></div>
+      <div class="stat"><div class="stat-label">{{ t("Uptime") }}</div>
+        <div class="stat-value" id="stat-uptime">—</div>
+        <div class="stat-sub">{{ t("ore operative") }}</div></div>
+      <div class="stat"><div class="stat-label">{{ t("Latenza P95") }}</div>
+        <div class="stat-value" id="stat-p95">{% if status.latency_p95_ms %}{{ status.latency_p95_ms|round|int }} ms{% else %}—{% endif %}</div>
+        <div class="stat-sub">{{ t("analizzatore") }} &rarr; {{ t("gestionale") }}</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">{{ t("Ultime 24 ore") }}</div>
+          <div style="display:flex;gap:14px;font-size:0.85rem;color:var(--ink-3);">
+            <span><span class="dot" style="background:var(--brand);"></span> {{ t("OK") }}</span>
+            <span><span class="dot" style="background:var(--warn-fill);"></span> {{ t("Parziali") }}</span>
+            <span><span class="dot" style="background:var(--crit);"></span> {{ t("Errori") }}</span>
+          </div>
+        </div>
+        <svg id="trend-svg" viewBox="0 0 720 160" style="width:100%;height:190px;display:block;"></svg>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">{{ t("Eventi recenti") }}</div>
+          <a href="/logs" style="font-size:0.9rem;">{{ t("Tutti i log") }}</a>
+        </div>
+        <div id="eventi-recenti" style="display:flex;flex-direction:column;">
+          <div style="color:var(--ink-3);padding:14px 0;">{{ t("Carico…") }}</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-header"><div class="card-title">{{ t("Controllo servizio") }}</div></div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" onclick="serviceAction('start')">{{ t("Avvia") }}</button>
+          <button class="btn" onclick="serviceAction('restart')">{{ t("Riavvia") }}</button>
+          <button class="btn btn-danger" onclick="if(confirm(T('Fermare il gateway? Finché è fermo nessun risultato arriva al gestionale.'))) serviceAction('stop')">{{ t("Ferma") }}</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title">{{ t("Aggiornamenti software") }}</div>
+          <span id="update-status" style="font-size:0.9rem;color:var(--ink-3);">—</span>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" onclick="checkUpdate()">{{ t("Verifica") }}</button>
+          <button class="btn btn-primary" style="display:none;" id="btn-update" onclick="applyUpdate()">{{ t("Aggiorna ora") }}</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="discovered-card" style="display:none;">
+      <div class="card-header">
+        <div class="card-title">{{ t("Device rilevati — da assegnare") }}</div>
+        <span id="discovered-count" style="font-size:0.9rem;color:var(--ink-3);"></span>
+      </div>
+      <p style="color:var(--ink-2);margin-bottom:12px;">
+        {{ t("Il gateway ha rilevato questi cavi USB. Scegli a quale analizzatore corrispondono e clicca «Assegna». La configurazione viene salvata da sola.") }}
+      </p>
+      <div id="discovered-list" style="display:flex;flex-direction:column;"></div>
+    </div>
+
+  </div>
+</details>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Live area: re-rendered by the server, already translated ─────────────
+async function ovRefresh() {
+  try {
+    var r = await fetch('/overview/live', {credentials: 'same-origin'});
+    if (!r.ok) return;
+    var html = await r.text();
+    var box = document.getElementById('ov-live');
+    if (box && box.innerHTML.trim() !== html.trim()) box.innerHTML = html;
+  } catch (e) { /* network hiccup: keep showing the last state */ }
+}
+setInterval(ovRefresh, 15000);
+
+async function ovStartGateway(btn) {
+  btn.disabled = true;
+  toast(T('Avvio…'));
+  try {
+    var r = await fetch('/api/service/start', {method: 'POST'});
+    var d = await r.json();
+    if (d.ok) toast(T('Gateway acceso'), 'info');
+    else {
+      // The technical reason (e.g. "sudo: a terminal is required") means
+      // nothing to a doctor: say what to do, keep the detail in the console.
+      console.warn('service start failed:', d.error);
+      toast(T("Non è stato possibile accendere il gateway. Spegni e riaccendi la scatola grigia, oppure chiama l'assistenza."), 'error');
+    }
+  } catch (e) {
+    toast(T('Errore di rete: {msg}', {msg: e.message}), 'error');
+  }
+  btn.disabled = false;
+  setTimeout(ovRefresh, 2500);
+}
+
+// ── Technician zone: loads its data only when opened ─────────────────────
+var techZone = document.getElementById('tech-zone');
+var techLoaded = false;
+if (techZone) {
+  techZone.addEventListener('toggle', function () {
+    if (techZone.open && !techLoaded) {
+      techLoaded = true;
+      drawTrend(); caricaEventi(); refreshDiscovered();
+      setInterval(drawTrend, 60000); setInterval(caricaEventi, 30000); setInterval(refreshDiscovered, 15000);
+    }
+  });
+}
+
+window._onStatusUpdate = function (d) {
+  var el = document.getElementById('stat-errors');
+  if (!el) return;
+  el.textContent = d.errors_today || 0;
+  el.className = 'stat-value ' + ((d.errors_today || 0) > 0 ? 'red' : '');
+  document.getElementById('stat-total').textContent = d.results_total || 0;
+  var up = d.uptime_seconds || 0;
+  document.getElementById('stat-uptime').textContent = Math.floor(up / 3600) + 'h ' + Math.floor((up % 3600) / 60) + 'm';
+};
+
+async function serviceAction(action) {
+  var labels = {start: T('Avvio…'), stop: T('Arresto…'), restart: T('Riavvio…')};
+  toast(labels[action] || T('Eseguo…'), 'info');
+  var r = await fetch('/api/service/' + action, {method: 'POST'});
+  var d = await r.json();
+  if (d.ok) toast(T('Fatto. Stato del servizio: {stato}', {stato: d.status}), 'success');
+  else toast(T('Errore: {msg}', {msg: d.error || T('sconosciuto')}), 'error');
+  setTimeout(ovRefresh, 2500);
+}
+
+async function checkUpdate() {
+  var st = document.getElementById('update-status');
+  st.textContent = T('Controllo…');
+  var r = await fetch('/api/update/check', {method: 'POST'});
+  var d = await r.json();
+  if (d.ok) {
+    st.textContent = d.update_available ? T('Aggiornamento disponibile') : T('Software aggiornato');
+    if (d.update_available) document.getElementById('btn-update').style.display = '';
+  } else {
+    st.textContent = T('Errore di rete');
+  }
+}
+
+async function applyUpdate() {
+  toast(T('Aggiornamento in corso…'), 'info');
+  document.getElementById('btn-update').disabled = true;
+  var r = await fetch('/api/update/apply', {method: 'POST'});
+  var d = await r.json();
+  if (d.ok) toast(d.message, 'success');
+  else toast(T('Errore: {msg}', {msg: d.error}), 'error');
+  document.getElementById('btn-update').disabled = false;
+}
+
+async function drawTrend() {
+  var svg = document.getElementById('trend-svg');
+  if (!svg) return;
+  var cs = getComputedStyle(document.documentElement);
+  var c = function (n, f) { return cs.getPropertyValue(n).trim() || f; };
+  var cGrid = c('--line', '#D5DCE1'), cText = c('--ink-3', '#5F6B77');
+  var cOk = c('--brand', '#2C5F8A'), cPart = c('--warn-fill', '#E9A820'), cErr = c('--crit', '#B42318');
+  try {
+    var d = await (await fetch('/api/history/trend?hours=24')).json();
+    var rows = d.hours || [];
+    if (!rows.length) {
+      svg.innerHTML = '<text x="360" y="80" text-anchor="middle" fill="' + cText + '" font-size="14">' + T('nessun dato nelle ultime 24 ore') + '</text>';
+      return;
+    }
+    var W = 720, H = 160, L = 36, R = 6, TOP = 8, B = 22, CW = W - L - R, CH = H - TOP - B;
+    var maxV = Math.max.apply(null, [1].concat(rows.map(function (x) { return x.ok + x.partial + x.err; })));
+    var bw = CW / rows.length * 0.78, gap = CW / rows.length * 0.22, out = '';
+    for (var i = 0; i <= 4; i++) {
+      var y = TOP + CH * i / 4;
+      out += '<line x1="' + L + '" y1="' + y + '" x2="' + (W - R) + '" y2="' + y + '" stroke="' + cGrid + '"/>';
+      out += '<text x="' + (L - 6) + '" y="' + (y + 4) + '" text-anchor="end" fill="' + cText + '" font-size="11">' + Math.round(maxV * (1 - i / 4)) + '</text>';
+    }
+    rows.forEach(function (row, i) {
+      var x = L + i * (bw + gap) + gap / 2, y = TOP + CH;
+      [['err', cErr], ['partial', cPart], ['ok', cOk]].forEach(function (p) {
+        var h = row[p[0]] / maxV * CH;
+        if (h > 0.5) { out += '<rect x="' + x + '" y="' + (y - h) + '" width="' + bw + '" height="' + h + '" fill="' + p[1] + '"><title>' + row.hour + ': ' + row[p[0]] + '</title></rect>'; y -= h + 1; }
+      });
+      if (i % 3 === 0) out += '<text x="' + (x + bw / 2) + '" y="' + (H - 5) + '" text-anchor="middle" fill="' + cText + '" font-size="11">' + (row.hour.split('T')[1] || '') + '</text>';
+    });
+    svg.innerHTML = out;
+  } catch (e) {}
+}
+
+// Recent events: built with textContent (log lines can contain patient ids).
+var RE_LOG = /^\d{4}-\d{2}-\d{2}T(\d{2}:\d{2}):\d{2}\s+\[(\w+)\s*\]\s+[\w.]+:\s*(.*)$/;
+function rigaEvento(ora, livello, testo) {
+  var riga = document.createElement('div');
+  riga.style.cssText = 'display:grid;grid-template-columns:52px 12px minmax(0,1fr);gap:10px;align-items:baseline;padding:8px 0;border-bottom:1px solid var(--line);';
+  var o = document.createElement('span'); o.style.cssText = 'font-family:var(--mono);font-size:0.85rem;color:var(--ink-3);'; o.textContent = ora;
+  var p = document.createElement('span'); p.className = 'dot';
+  p.style.background = (livello === 'ERROR' || livello === 'CRITICAL') ? 'var(--crit)' : livello === 'WARNING' ? 'var(--warn-fill)' : 'var(--brand)';
+  var m = document.createElement('span'); m.style.cssText = 'font-size:0.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'; m.textContent = testo; m.title = testo;
+  riga.append(o, p, m);
+  return riga;
+}
+function messaggioVuoto(testo) {
+  var d = document.createElement('div'); d.style.cssText = 'color:var(--ink-3);padding:14px 0;'; d.textContent = testo; return d;
+}
+async function caricaEventi() {
+  var box = document.getElementById('eventi-recenti');
+  if (!box) return;
+  try {
+    var d = await (await fetch('/api/logs?n=80')).json();
+    var righe = (d.lines || []).slice().reverse(), n = 0;
+    box.textContent = '';
+    for (var i = 0; i < righe.length && n < 8; i++) {
+      var m = RE_LOG.exec(righe[i]);
+      if (!m || m[3].indexOf('USB probe') === 0) continue;
+      box.appendChild(rigaEvento(m[1], m[2], m[3])); n++;
+    }
+    if (!n) box.appendChild(messaggioVuoto(T('Nessun evento registrato.')));
+  } catch (e) {
+    box.textContent = ''; box.appendChild(messaggioVuoto(T('Log non disponibili.')));
+  }
+}
+
+var DEVICE_TYPE_OPTIONS = [
+  {value: "loc200_serial",    label: "LOC-200 (RS-232)"},
+  {value: "sysmex_astm",      label: "Sysmex XP-300 / pocH-100i (RS-232)"},
+  {value: "uc1000_serial",    label: "Menarini UC-1000"},
+  {value: "reflotron_serial", label: "Roche Reflotron Plus"},
+  {value: "cobas_poct",       label: "Roche cobas b101"},
+  {value: "mllp_hl7",         label: "HL7 v2 MLLP"},
+];
+function _esc(s) { var d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
+async function refreshDiscovered() {
+  try {
+    var r = await fetch("/api/devices/discovered", {credentials: "same-origin"});
+    if (!r.ok) return;
+    var data = await r.json();
+    var pending = (data.pending || []).filter(function (d) { return !d.activated; });
+    var card = document.getElementById("discovered-card");
+    if (!pending.length) { card.style.display = "none"; return; }
+    card.style.display = "block";
+    document.getElementById("discovered-count").textContent = T("{n} da assegnare", {n: pending.length});
+    document.getElementById("discovered-list").innerHTML = pending.map(function (d, i) {
+      var key = d.key || (d.source + ":" + d.location);
+      var opts = DEVICE_TYPE_OPTIONS.map(function (o) {
+        return '<option value="' + o.value + '"' + (o.value === d.device_type ? ' selected' : '') + '>' + _esc(o.label) + '</option>';
+      }).join('');
+      return '<div style="border-top:1px solid var(--line);padding:12px 0;display:flex;gap:12px;align-items:center;flex-wrap:wrap;justify-content:space-between;">' +
+        '<div><strong>' + _esc(d.display_name || d.vendor || d.chip || T("dispositivo generico")) + '</strong><br>' +
+        '<span style="color:var(--ink-3);font-size:0.9rem;">' + _esc(d.location) + ' ' + _esc(d.usb_id || '') + '</span></div>' +
+        '<div style="display:flex;gap:8px;"><select id="dt-' + i + '" class="form-input" style="width:260px;">' + opts + '</select>' +
+        '<button class="btn btn-primary" data-key="' + _esc(key) + '" onclick="assignDiscovered(this.dataset.key, \'dt-' + i + '\')">' + T("Assegna") + '</button></div></div>';
+    }).join('');
+  } catch (e) {}
+}
+async function assignDiscovered(key, selectId) {
+  var sel = document.getElementById(selectId);
+  if (!sel || !sel.value) { toast(T("Scegli un tipo di analizzatore."), "error"); return; }
+  try {
+    var r = await fetch("/api/devices/activate", {method: "POST", credentials: "same-origin",
+      headers: {"Content-Type": "application/json"}, body: JSON.stringify({key: key, device_type: sel.value})});
+    var data = await r.json();
+    if (data.ok) { toast(T("Assegnato. Riavvia il gateway (Controllo servizio → Riavvia) per attivare il nuovo device."), "success"); refreshDiscovered(); }
+    else toast(T("Errore: {msg}", {msg: data.error || T("operazione non riuscita")}), "error");
+  } catch (e) { toast(T("Errore di rete: {msg}", {msg: e.message}), "error"); }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,15 @@
+id: isens_caresens
+type: cobas_poct
+enabled: false
+display_name: "i-SENS CareSens Expert Plus (Blood Gas POCT)"
+vendor: i-SENS
+model: CareSens Expert Plus
+serial_port: "/dev/ttyACM3"
+notes: |
+  Blood gas / elettroliti POCT compatto.
+  Protocollo verificato (fonte: i-SENS i-SmartCare 10 brochure):
+    - POCT1-A + IHE DEC (HL7) selezionabili
+    - Wi-Fi, Ethernet, USB, NFC
+    - i-SmartCare DataManager middleware
+  Adapter: cobas_poct per POCT1-A; passare a mllp_hl7 se HL7 abilitato.
+  Fonte: https://www.medica.de/vis-content/event-medica2025/exh-medica2025.3038156/MEDICA-2025-i-SENS-Inc.-Product-medica2025.3038156-hNV8aqQoQaaQsk0ykaHaSw.pdf

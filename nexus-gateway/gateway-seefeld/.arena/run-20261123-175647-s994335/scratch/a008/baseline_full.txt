@@ -1,0 +1,30 @@
+                else:
+                    # POSIX _communicate already populated the output so
+                    # far into the TimeoutExpired exception.
+                    process.wait()
+                raise
+            except:  # Including KeyboardInterrupt, communicate handled that.
+                process.kill()
+                # We don't call process.wait() as .__exit__ does that for us.
+                raise
+            retcode = process.poll()
+            if check and retcode:
+>               raise CalledProcessError(retcode, process.args,
+                                         output=stdout, stderr=stderr)
+E               subprocess.CalledProcessError: Command '['git', 'ls-files']' returned non-zero exit status 128.
+
+/usr/lib/python3.14/subprocess.py:578: CalledProcessError
+=========================== short test summary info ============================
+FAILED tests/test_dlq_rispedisci.py::test_un_guasto_interno_resta_json - asse...
+FAILED tests/test_dlq_rispedisci.py::test_il_messaggio_porta_il_tipo_dell_errore
+FAILED tests/test_firewall_sync.py::test_apre_la_porta_di_un_device_tcp - Ass...
+FAILED tests/test_firewall_sync.py::test_il_nome_dell_apparecchio_finisce_nel_commento
+FAILED tests/test_firewall_sync.py::test_ignora_i_device_disabilitati - Asser...
+FAILED tests/test_firewall_sync.py::test_una_porta_sola_anche_con_due_device
+FAILED tests/test_firewall_sync.py::test_apre_anche_la_porta_http_del_loc200
+FAILED tests/test_pacchetto_eseguibile.py::test_ogni_script_con_shebang_e_eseguibile
+FAILED tests/test_pacchetto_eseguibile.py::test_gli_script_sono_memorizzati_con_fine_riga_unix
+FAILED tests/test_pacchetto_eseguibile.py::test_install_e_firewall_sync_sono_eseguibili
+FAILED tests/test_pacchetto_eseguibile.py::test_nessun_heredoc_dentro_una_sostituzione_di_comando
+FAILED tests/test_pacchetto_eseguibile.py::test_ogni_script_di_shell_passa_il_controllo_di_sintassi
+12 failed, 401 passed, 4 skipped in 22.27s

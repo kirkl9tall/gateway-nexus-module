@@ -1,0 +1,49 @@
+---
+- name: Install jerumednexus-gateway package
+  apt:
+    name: "jerumednexus-gateway={{ gateway_version }}*"
+    state: present
+    update_cache: true
+  notify: Restart gateway
+
+- name: Ensure config dir owned by service user
+  file:
+    path: /opt/jerumednexus/config
+    state: directory
+    owner: jerumednexus
+    group: jerumednexus
+    mode: '0750'
+
+- name: Deploy gateway.yaml from clinic template
+  template:
+    src: "{{ gateway_yaml_template }}"
+    dest: /opt/jerumednexus/config/gateway.yaml
+    owner: jerumednexus
+    group: jerumednexus
+    mode: '0640'
+  notify: Restart gateway
+
+- name: Install DLQ encryption key
+  copy:
+    src: "{{ dlq_key_source }}"
+    dest: /opt/jerumednexus/config/dlq_key
+    owner: jerumednexus
+    group: jerumednexus
+    mode: '0600'
+  no_log: true
+
+- name: Enable and start gateway
+  systemd:
+    name: jerumednexus-gateway
+    enabled: true
+    state: started
+    daemon_reload: true
+
+- name: Wait for /readyz to return 200
+  uri:
+    url: "http://127.0.0.1:{{ webui_port }}/readyz"
+    status_code: 200
+  register: readyz
+  retries: 30
+  delay: 2
+  until: readyz.status == 200

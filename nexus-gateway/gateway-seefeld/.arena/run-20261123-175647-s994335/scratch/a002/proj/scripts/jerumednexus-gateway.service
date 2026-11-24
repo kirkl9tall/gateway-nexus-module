@@ -1,0 +1,48 @@
+[Unit]
+Description=JerumedNexus HL7 v2.5 Gateway
+Documentation=https://github.com/jerumed-nexus/jerumednexus-gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=__USER__
+Group=__GROUP__
+WorkingDirectory=__INSTALL_DIR__
+EnvironmentFile=-__INSTALL_DIR__/config/secrets.env
+# Anchors every Path("config/...") / Path("logs/...") to the install tree
+# regardless of who launches the process.
+Environment=JMNX_INSTALL_ROOT=__INSTALL_DIR__
+Environment=PYTHONPATH=__INSTALL_DIR__
+ExecStart=__INSTALL_DIR__/.venv/bin/python __INSTALL_DIR__/main.py
+ExecReload=/bin/kill -HUP $MAINPID
+Restart=on-failure
+RestartSec=10s
+# 45s leaves margin so a clean graceful shutdown (queue drain + reader close)
+# finishes before systemd SIGKILLs it (which showed "failed (timeout)").
+TimeoutStopSec=45s
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=jerumednexus-gateway
+
+# Serial + network device access
+SupplementaryGroups=dialout
+
+# ── systemd hardening ─────────────────────────────────────────────
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=false
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictNamespaces=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+SystemCallArchitectures=native
+ReadWritePaths=__INSTALL_DIR__/logs __INSTALL_DIR__/config /var/log/jerumednexus /var/lib/jerumednexus /mnt
+
+[Install]
+WantedBy=multi-user.target

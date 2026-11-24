@@ -1,0 +1,24 @@
+id: sysmex_xp300
+type: sysmex_astm
+enabled: false
+display_name: "Sysmex XP-300 Hämatologie"
+vendor: Sysmex
+model: XP-300
+listen_host: "0.0.0.0"
+listen_port: 5000
+strip_id_suffix: true
+
+# XP-300 è SEND-ONLY per conferma del tecnico Sysmex (agosto 2026).
+# Il device manda risultati verso il gateway ma NON accetta Query/Order dall'host.
+# Impostare unidirectional=true impedisce al gateway di rispondere a Q record
+# con un "no order" synthetic response (che il device non capirebbe).
+astm_mode: "1381-02"
+unidirectional: true
+idle_timeout_seconds: 300
+read_timeout_seconds: 15
+
+notes: |
+  VERIFIED-DOC — dry send-only.
+  Se un tecnico riporta che il proprio XP-300 supporta Query bidirezionale
+  (versioni firmware più recenti), impostare unidirectional: false.
+  Fonte: XQ/XP-Series ASTM Host Interface Spec v1.4, tech Sysmex 2026-08-28.

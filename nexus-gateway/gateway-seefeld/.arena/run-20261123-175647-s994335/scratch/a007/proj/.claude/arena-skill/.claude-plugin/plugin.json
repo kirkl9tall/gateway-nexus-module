@@ -1,0 +1,21 @@
+{
+  "name": "arena-skill",
+  "description": "Arena tournament skill for Codex and Claude Code. Independent strategies, adversarial review, and rubric-scored answers.",
+  "version": "1.1.0",
+  "author": {
+    "name": "Jake Schincariol",
+    "url": "https://opusjake.ai"
+  },
+  "homepage": "https://github.com/hs487667/arena-skill",
+  "repository": "https://github.com/hs487667/arena-skill",
+  "license": "MIT",
+  "keywords": [
+    "codex",
+    "claude-code",
+    "subagents",
+    "multi-agent",
+    "tournament",
+    "arena",
+    "prompting"
+  ]
+}

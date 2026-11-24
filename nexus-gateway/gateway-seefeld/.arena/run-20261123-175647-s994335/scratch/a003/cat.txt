@@ -1,0 +1,324 @@
+__comment__ | Italian source text -> translation. Edit, then run: python t | Italian source text -> translation. Edit, then run
+1 da controllare | 1 zu prüfen | 1 à vérifier
+1 risultato non arrivato al gestionale | 1 Ergebnis nicht an die Praxissoftware zugestellt | 1 résultat non transmis au logiciel du cabinet
+Accedi | Anmelden | Se connecter
+Accendi il gateway | Gateway einschalten | Allumer le gateway
+Acceso | Ein | Allumé
+Accesso | Anmeldung | Connexion
+Accesso al pannello del gateway | Zugang zur Gateway-Verwaltung | Accès au panneau du gateway
+Aggiorna ora | Jetzt aktualisieren | Mettre à jour
+Aggiornamenti software | Software-Updates | Mises à jour du logiciel
+Aggiornamento disponibile | Update verfügbar | Mise à jour disponible
+Aggiornamento in corso… | Update läuft… | Mise à jour en cours…
+Amministratore | Administrator | Administrateur
+Analisi oggi | Analysen heute | Analyses aujourd'hui
+Analisi per giorno | Analysen pro Tag | Analyses par jour
+Analisi per giorno, ultimi 7 giorni | Analysen pro Tag, letzte 7 Tage | Analyses par jour, 7 derniers jours
+Analizzatore | Analysegerät | Analyseur
+Analizzatori | Analysegeräte | Analyseurs
+Analizzatori collegati | Verbundene Analysegeräte | Analyseurs connectés
+Apparecchi | Geräte | Appareils
+Arresto… | Wird gestoppt… | Arrêt…
+Assegna | Zuweisen | Attribuer
+Assegnato. Riavvia il gateway (Controllo servizio → Riavvia) per attiv | Zugewiesen. Starten Sie das Gateway neu (Dienststeuerung → N | Attribué. Redémarrez le gateway (Contrôle du servi
+Assistenza Jerumed Nexus GmbH | Support Jerumed Nexus GmbH | Assistance Jerumed Nexus GmbH
+Avvia | Starten | Démarrer
+Avvio… | Wird gestartet… | Démarrage…
+Avvisa il tecnico per completare l'assegnazione dell'analizzatore. | Informieren Sie den Techniker, damit er das Analysegerät zuw | Prévenez le technicien pour qu'il termine l'attrib
+Backup | Sicherung | Sauvegarde
+C'è 1 cosa da sistemare. | Es gibt 1 Sache zu beheben. | Il y a 1 chose à régler.
+C'è spazio per conservare i risultati? | Ist genug Speicherplatz für die Ergebnisse da? | Y a-t-il de la place pour garder les résultats ?
+C'è spazio sufficiente. | Es ist genug Platz vorhanden. | Il y a assez de place.
+Carico… | Wird geladen… | Chargement…
+Cartella condivisa | Freigegebener Ordner | Dossier partagé
+Cavo USB | USB-Kabel | Câble USB
+Cavo di rete | Netzwerkkabel | Câble réseau
+Cavo non rilevato | Kabel nicht erkannt | Câble non détecté
+Cerca il problema | Problem suchen | Chercher le problème
+Chiama l'assistenza per collegare il software dello studio. | Rufen Sie den Support an, um die Praxissoftware zu verbinden | Appelez l'assistance pour connecter le logiciel du
+Chiama l'assistenza. | Rufen Sie den Support an. | Appelez l'assistance.
+Chiama l'assistenza: serve una correzione nella configurazione. | Rufen Sie den Support an: Die Konfiguration muss korrigiert  | Appelez l'assistance : la configuration doit être 
+Chimica clinica | Klinische Chemie | Chimie clinique
+Ci sono {n} cose da sistemare. | Es gibt {n} Dinge zu beheben. | Il y a {n} choses à régler.
+Codice OTP (6 cifre) | OTP-Code (6 Ziffern) | Code OTP (6 chiffres)
+Codice OTP non valido | Ungültiger OTP-Code | Code OTP non valide
+Collega gli analizzatori del laboratorio al gestionale dello studio. | Verbindet die Laborgeräte mit Ihrer Praxissoftware. | Relie les analyseurs du laboratoire au logiciel de
+Collega il primo apparecchio per iniziare a ricevere i risultati. | Verbinden Sie das erste Gerät, um Ergebnisse zu empfangen. | Connectez le premier appareil pour commencer à rec
+Collega un apparecchio | Gerät verbinden | Connecter un appareil
+Collegamento da completare | Verbindung unvollständig | Connexion à compléter
+Collegare un nuovo apparecchio | Ein neues Gerät verbinden | Connecter un nouvel appareil
+Collegato | Verbunden | Connecté
+Conferma OTP | OTP bestätigen | Confirmer le code OTP
+Conferma password | Passwort bestätigen | Confirmer le mot de passe
+Configura | Einrichten | Configurer
+Configurazione | Konfiguration | Configuration
+Configurazione guidata | Geführte Einrichtung | Configuration guidée
+Configurazione guidata — passo {step} di {total} | Geführte Einrichtung — Schritt {step} von {total} | Configuration guidée — étape {step} sur {total}
+Configurazione incompleta: | Konfiguration unvollständig: | Configuration incomplète :
+Configurazione iniziale | Ersteinrichtung | Configuration initiale
+Controlla adesso | Jetzt prüfen | Vérifier maintenant
+Controlla che il cavo USB sia inserito e che l'apparecchio sia acceso. | Prüfen Sie, ob das USB-Kabel eingesteckt und das Gerät einge | Vérifiez que le câble USB est branché et que l'app
+Controlla che il computer con il software dello studio sia acceso e in | Prüfen Sie, ob der Computer mit der Praxissoftware eingescha | Vérifiez que l'ordinateur du logiciel du cabinet e
+Controlla di nuovo | Erneut prüfen | Vérifier à nouveau
+Controlla in pochi secondi tutta la strada dei risultati: gateway, app | Prüft in wenigen Sekunden den ganzen Weg der Ergebnisse: Gat | Vérifie en quelques secondes tout le chemin des ré
+Controllo eseguito alle {ora}. | Geprüft um {ora}. | Vérification faite à {ora}.
+Controllo in corso… ci vogliono pochi secondi. | Prüfung läuft… das dauert nur wenige Sekunden. | Vérification en cours… quelques secondes.
+Controllo incompleto. | Prüfung unvollständig. | Vérification incomplète.
+Controllo servizio | Dienststeuerung | Contrôle du service
+Controllo… | Prüfe… | Vérification…
+Cosa fare | Was tun | Que faire
+Crea password e continua | Passwort erstellen und weiter | Créer le mot de passe et continuer
+Credenziali errate | Benutzername oder Passwort falsch | Identifiant ou mot de passe incorrect
+DEMO MODE — dati simulati, non usare in produzione | DEMO-MODUS — simulierte Daten, nicht im Praxisbetrieb verwen | MODE DÉMO — données simulées, ne pas utiliser en p
+Da controllare | Zu prüfen | À vérifier
+Da fare | Zu erledigen | À faire
+Da rispedire | Erneut senden | À renvoyer
+Dettagli per il tecnico | Details für den Techniker | Détails pour le technicien
+Device attivo | Aktives Gerät | Appareil actif
+Device rilevati — da assegnare | Erkannte Geräte — zuzuweisen | Appareils détectés — à attribuer
+Dom | So | Dim
+Dove vanno i risultati | Wohin die Ergebnisse gehen | Où vont les résultats
+Ematologia | Hämatologie | Hématologie
+Emogas | Blutgas | Gaz du sang
+Errore | Fehler | Erreur
+Errore di rete | Netzwerkfehler | Erreur réseau
+Errore di rete: {msg} | Netzwerkfehler: {msg} | Erreur réseau : {msg}
+Errore: {msg} | Fehler: {msg} | Erreur : {msg}
+Errori | Fehler | Erreurs
+Errori oggi | Fehler heute | Erreurs aujourd'hui
+Esci | Abmelden | Se déconnecter
+Esegui il controllo per vedere i dettagli. | Starten Sie die Prüfung, um die Details zu sehen. | Lancez la vérification pour voir les détails.
+Esegui un'analisi di prova: quando arriva, l'apparecchio diventa verde | Führen Sie eine Testanalyse durch: Sobald sie ankommt, wird  | Faites une analyse de test : dès qu'elle arrive, l
+Eseguo… | Wird ausgeführt… | En cours…
+Eventi recenti | Letzte Ereignisse | Événements récents
+Fatto. Stato del servizio: {stato} | Erledigt. Dienststatus: {stato} | Terminé. État du service : {stato}
+Ferma | Stoppen | Arrêter
+Fermare il gateway? Finché è fermo nessun risultato arriva al gestiona | Gateway stoppen? Solange es gestoppt ist, kommen keine Ergeb | Arrêter le gateway ? Tant qu'il est arrêté, aucun 
+Fermo | Gestoppt | Arrêté
+Frame Inspector | Frame Inspector | Frame Inspector
+Funziona | Läuft | Fonctionne
+Funziona, con {n} errori oggi. | Läuft, mit {n} Fehlern heute. | Fonctionne, avec {n} erreurs aujourd'hui.
+Funziona. 1 messaggio da rispedire. | Läuft. 1 Nachricht muss erneut gesendet werden. | Fonctionne. 1 message à renvoyer.
+Funziona. {n} messaggi da rispedire. | Läuft. {n} Nachrichten müssen erneut gesendet werden. | Fonctionne. {n} messages à renvoyer.
+Funziona. {n} risultati aspettano di essere inviati. | Läuft. {n} Ergebnisse warten auf den Versand. | Fonctionne. {n} résultats attendent d'être envoyés
+Gateway | Gateway | Gateway
+Gateway acceso | Gateway ein | Gateway allumé
+Gateway spento | Gateway aus | Gateway éteint
+Gestionale | Praxissoftware | Logiciel du cabinet
+Gestionali collegati | Verbundene Praxissoftware | Logiciels de cabinet connectés
+Gio | Do | Jeu
+Gli apparecchi arrivano al gateway? | Erreichen die Geräte das Gateway? | Les appareils atteignent-ils le gateway ?
+Gli apparecchi non possono inviare finché il gateway è spento. | Die Geräte können nichts senden, solange das Gateway aus ist | Les appareils ne peuvent rien envoyer tant que le 
+Glicemia | Blutzucker | Glycémie
+HbA1c e lipidi | HbA1c und Lipide | HbA1c et lipides
+I risultati arrivano a {dest}. Nessun risultato ancora oggi. | Die Ergebnisse gehen an {dest}. Heute noch keine Ergebnisse. | Les résultats arrivent dans {dest}. Aucun résultat
+I risultati arrivano a {dest}. Ultimo risultato {quando} da {apparecch | Die Ergebnisse gehen an {dest}. Letztes Ergebnis {quando} vo | Les résultats arrivent dans {dest}. Dernier résult
+I risultati arrivano al paziente giusto? | Kommen die Ergebnisse beim richtigen Patienten an? | Les résultats arrivent-ils au bon patient ?
+I risultati non vanno da nessuna parte. Il tecnico deve collegare il s | Die Ergebnisse gehen nirgendwohin. Der Techniker muss die Pr | Les résultats ne vont nulle part. Le technicien do
+I risultati restano nel gateway e partono appena {name} risponde di nu | Die Ergebnisse bleiben im Gateway und werden gesendet, sobal | Les résultats restent dans le gateway et partent d
+I risultati sono indirizzati correttamente. | Die Ergebnisse sind richtig adressiert. | Les résultats sont correctement adressés.
+I tuoi apparecchi | Ihre Geräte | Vos appareils
+ID paziente | Patienten-ID | ID patient
+Il cerchio mostra quanti risultati di oggi sono arrivati al software d | Der Kreis zeigt, wie viele Ergebnisse von heute in der Praxi | Le cercle montre combien de résultats du jour sont
+Il gateway ha rilevato questi cavi USB. Scegli a quale analizzatore co | Das Gateway hat diese USB-Kabel erkannt. Wählen Sie das pass | Le gateway a détecté ces câbles USB. Choisissez l'
+Il gateway non funziona. | Das Gateway funktioniert nicht. | Le gateway ne fonctionne pas.
+Il gateway si sta avviando. Riprova fra un minuto. | Das Gateway startet gerade. Versuchen Sie es in einer Minute | Le gateway démarre. Réessayez dans une minute.
+Il gateway è acceso e funziona. | Das Gateway ist eingeschaltet und läuft. | Le gateway est allumé et fonctionne.
+Il gateway è acceso? | Ist das Gateway eingeschaltet? | Le gateway est-il allumé ?
+Il gateway è spento. I risultati non arrivano allo studio. | Das Gateway ist aus. Die Ergebnisse kommen nicht in der Prax | Le gateway est éteint. Les résultats n'arrivent pa
+Il gestionale non ha risposto in tempo. Nessun dato è perso: rispedisc | Die Praxissoftware hat nicht rechtzeitig geantwortet. Es geh | Le logiciel du cabinet n'a pas répondu à temps. Au
+Il nome dello studio non è ancora stato inserito. | Der Name der Praxis ist noch nicht eingetragen. | Le nom du cabinet n'a pas encore été saisi.
+Il servizio è fermo. Nessun risultato arriva al gestionale. | Der Dienst ist gestoppt. Es kommen keine Ergebnisse in der P | Le service est arrêté. Aucun résultat n'arrive au 
+Il software dello studio potrebbe non assegnare i risultati ai pazient | Die Praxissoftware ordnet die Ergebnisse eventuell keinem Pa | Le logiciel du cabinet risque de ne pas attribuer 
+Il software dello studio risponde? | Antwortet die Praxissoftware? | Le logiciel du cabinet répond-il ?
+Imposta la password di amministrazione del gateway | Legen Sie das Administrator-Passwort des Gateways fest | Définissez le mot de passe administrateur du gatew
+In attesa dei risultati di oggi… | Warten auf die heutigen Ergebnisse… | En attente des résultats du jour…
+In attesa di analisi | Wartet auf Analysen | En attente d'analyses
+In attesa… | Warten… | En attente…
+Inseriscilo in Configurazione | Tragen Sie ihn unter Konfiguration ein | Saisissez-le dans Configuration
+Invia di nuovo | Erneut senden | Renvoyer
+La password deve avere almeno {n} caratteri. | Das Passwort muss mindestens {n} Zeichen lang sein. | Le mot de passe doit comporter au moins {n} caract
+Latenza P95 | Latenz P95 | Latence P95
+Le password non coincidono. | Die Passwörter stimmen nicht überein. | Les mots de passe ne correspondent pas.
+Licenza | Lizenz | Licence
+Licenza in scadenza | Lizenz läuft bald ab | Licence bientôt expirée
+Licenza scaduta | Lizenz abgelaufen | Licence expirée
+Lo spazio si sta esaurendo. | Der Speicherplatz wird knapp. | L'espace commence à manquer.
+Log di sistema | Systemprotokoll | Journal système
+Log e trace | Protokolle | Journaux
+Log non disponibili. | Protokolle nicht verfügbar. | Journaux indisponibles.
+Lun | Mo | Lun
+Mai sentito | Noch nie gemeldet | Jamais entendu
+Mar | Di | Mar
+Menu | Menü | Menu
+Mer | Mi | Mer
+Messaggi | Nachrichten | Messages
+Minimo {n} caratteri. Suggerito: mix di lettere, numeri e simboli. | Mindestens {n} Zeichen. Empfohlen: Buchstaben, Zahlen und So | Au moins {n} caractères. Conseillé : mélange de le
+Monitor | Überwachung | Surveillance
+Nessun analizzatore collegato al momento. | Zurzeit ist kein Analysegerät verbunden. | Aucun analyseur connecté pour le moment.
+Nessun apparecchio è ancora collegato. | Es ist noch kein Gerät verbunden. | Aucun appareil n'est encore connecté.
+Nessun apparecchio è attivo. | Kein Gerät ist aktiv. | Aucun appareil n'est actif.
+Nessun evento registrato. | Keine Ereignisse. | Aucun événement.
+Nessun gestionale configurato. | Keine Praxissoftware eingerichtet. | Aucun logiciel de cabinet configuré.
+Nessun risultato finora. | Noch keine Ergebnisse. | Aucun résultat pour l'instant.
+Nessun software dello studio è collegato. | Es ist keine Praxissoftware verbunden. | Aucun logiciel de cabinet n'est connecté.
+Nessuno collegato | Keines verbunden | Aucun connecté
+No | Nein | Non
+Non collegato | Nicht verbunden | Non connecté
+Non esiste una password di default. | Es gibt kein Standardpasswort. | Il n'existe pas de mot de passe par défaut.
+Non ha ancora inviato nessun risultato. Invia un risultato di prova da | Hat noch kein Ergebnis gesendet. Senden Sie ein Testergebnis | N'a encore envoyé aucun résultat. Envoyez un résul
+Non raggiungibile | Nicht erreichbar | Injoignable
+Non verificabile | Nicht prüfbar | Non vérifiable
+Non è stato possibile accendere il gateway. Spegni e riaccendi la scat | Das Gateway konnte nicht eingeschaltet werden. Schalten Sie  | Impossible d'allumer le gateway. Éteignez et rallu
+Non è stato possibile controllarlo. | Konnte nicht geprüft werden. | Impossible de le vérifier.
+Non è stato possibile eseguire il controllo: {msg} | Die Prüfung konnte nicht durchgeführt werden: {msg} | Impossible d'effectuer la vérification : {msg}
+Nuova password | Neues Passwort | Nouveau mot de passe
+Nuovo apparecchio collegato via USB | Neues Gerät per USB angeschlossen | Nouvel appareil branché en USB
+Nuovo cavo USB collegato | Neues USB-Kabel angeschlossen | Nouveau câble USB branché
+OK | OK | OK
+Oggi | Heute | Aujourd'hui
+Ogni apparecchio collegato al gateway, e se sta inviando i risultati. | Jedes Gerät am Gateway, und ob es Ergebnisse sendet. | Chaque appareil connecté au gateway, et s'il envoi
+Ora | Zeit | Heure
+Panoramica | Übersicht | Aperçu
+Parziali | Teilweise | Partiels
+Passo {step} di {total} | Schritt {step} von {total} | Étape {step} sur {total}
+Password | Passwort | Mot de passe
+Per il tecnico | Für den Techniker | Pour le technicien
+Percorso dei risultati | Weg der Ergebnisse | Chemin des résultats
+Premi «Controlla adesso». Non cambia niente: guarda soltanto. | Klicken Sie auf «Jetzt prüfen». Es wird nichts verändert, nu | Cliquez sur « Vérifier maintenant ». Rien n'est mo
+Primo avvio | Erster Start | Premier démarrage
+Pronto | Bereit | Prêt
+Questa è l'unica password di accesso al pannello. | Dies ist das einzige Passwort für die Verwaltung. | C'est le seul mot de passe d'accès au panneau.
+Recapitato | Zugestellt | Transmis
+Referti | Befunde | Résultats
+Rete | Netzwerk | Réseau
+Riavvia | Neu starten | Redémarrer
+Riavvia il gateway. Se l'apparecchio non arriva ancora, chiama l'assis | Starten Sie das Gateway neu. Wenn das Gerät immer noch nicht | Redémarrez le gateway. Si l'appareil n'arrive touj
+Riavvio… | Wird neu gestartet… | Redémarrage…
+Riceve i risultati | Empfängt Ergebnisse | Reçoit les résultats
+Rispedisci | Erneut senden | Renvoyer
+Risultati | Ergebnisse | Résultats
+Risultati di oggi | Ergebnisse von heute | Résultats du jour
+Risultati in attesa | Ergebnisse warten | Résultats en attente
+Sab | Sa | Sam
+Scegli un tipo di analizzatore. | Wählen Sie einen Gerätetyp. | Choisissez un type d'analyseur.
+Scegli una password forte — sarà l'unico modo per accedere al gateway. | Wählen Sie ein sicheres Passwort — es ist der einzige Zugang | Choisissez un mot de passe solide — ce sera le seu
+Segui le indicazioni qui sotto, dall'alto verso il basso. | Folgen Sie den Hinweisen unten, von oben nach unten. | Suivez les indications ci-dessous, de haut en bas.
+Serve aiuto? Assistenza: +41 78 402 05 99 | Brauchen Sie Hilfe? Support: +41 78 402 05 99 | Besoin d'aide ? Assistance : +41 78 402 05 99
+Servizio attivo | Dienst läuft | Service actif
+Servizio fermo | Dienst gestoppt | Service arrêté
+Setup guidato | Einrichtungsassistent | Assistant de configuration
+Sistema | System | Système
+Software aggiornato | Software ist aktuell | Logiciel à jour
+Software dello studio | Praxissoftware | Logiciel du cabinet
+Sono conservati nel gateway. Inviali di nuovo quando il software dello | Sie sind im Gateway gespeichert. Senden Sie sie erneut, soba | Ils sont conservés dans le gateway. Renvoyez-les q
+Spazio quasi esaurito: il gateway smetterà di salvare i risultati. | Speicher fast voll: Das Gateway kann bald keine Ergebnisse m | Espace presque plein : le gateway va cesser d'enre
+Spegni e riaccendi il gateway (la scatola grigia). Se non basta, chiam | Schalten Sie das Gateway (die graue Box) aus und wieder ein. | Éteignez et rallumez le gateway (le boîtier gris).
+Spento | Aus | Éteint
+Stato | Status | État
+Strumenti avanzati | Erweiterte Werkzeuge | Outils avancés
+Studio | Praxis | Cabinet
+Sì | Ja | Oui
+Tecnico | Techniker | Technicien
+Test in corso… | Test läuft… | Test en cours…
+Topologia | Topologie | Topologie
+Totale storico | Gesamt | Total
+Trace protocollo | Protokoll-Trace | Trace protocole
+Troppi tentativi — riprova tra {m}m {s}s. | Zu viele Versuche — bitte in {m} Min. {s} Sek. erneut versuc | Trop de tentatives — réessayez dans {m} min {s} s.
+Tutti | Alle | Tous
+Tutti funzionano | Alle funktionieren | Tous fonctionnent
+Tutti gli apparecchi | Alle Geräte | Tous les appareils
+Tutti i log | Alle Protokolle | Tous les journaux
+Tutti → | Alle → | Tous →
+Tutto a posto. | Alles in Ordnung. | Tout est en ordre.
+Tutto funziona. | Alles funktioniert. | Tout fonctionne.
+Ultima analisi | Letzte Analyse | Dernière analyse
+Ultime 24 ore | Letzte 24 Stunden | Dernières 24 heures
+Ultimo contatto {quando} | Letzter Kontakt {quando} | Dernier contact {quando}
+Ultimo risultato {quando} | Letztes Ergebnis {quando} | Dernier résultat {quando}
+Uptime | Betriebszeit | Temps de fonctionnement
+Urine | Urin | Urine
+Uscire dalla sessione? | Abmelden? | Se déconnecter ?
+Utente | Benutzer | Utilisateur
+Utenti | Benutzer | Utilisateurs
+Vai ai messaggi da rispedire | Zu den erneut zu sendenden Nachrichten | Voir les messages à renvoyer
+Vai al rinnovo | Zur Verlängerung | Renouveler
+Vai alla configurazione | Zur Konfiguration | Aller à la configuration
+Valori | Werte | Valeurs
+Ven | Fr | Ven
+Verifica | Prüfen | Vérifier
+Verifica impianto | Anlage prüfen | Vérifier l'installation
+Verifico lo stato… | Status wird geprüft… | Vérification de l'état…
+Verifico… | Prüfe… | Vérification…
+Vista | Ansicht | Vue
+Wire Replay | Wire Replay | Wire Replay
+aggiornato alle {ora} | aktualisiert um {ora} | mis à jour à {ora}
+analisi | Analysen | analyses
+analisi oggi | Analysen heute | analyses aujourd'hui
+analizzatore | Analysegerät | analyseur
+catalogo, scansione USB, parametri, porte e protocolli | Katalog, USB-Suche, Parameter, Ports und Protokolle | catalogue, recherche USB, paramètres, ports et pro
+confidenza | Übereinstimmung | confiance
+connesso | verbunden | connecté
+da assegnare | zuzuweisen | à assigner
+da rispedire | erneut zu senden | à renvoyer
+dall'installazione | seit der Installation | depuis l'installation
+disabilitato | deaktiviert | désactivé
+dispositivo generico | unbekanntes Gerät | appareil générique
+errore | Fehler | erreur
+errori, tempi, eventi, servizio, aggiornamenti | Fehler, Zeiten, Ereignisse, Dienst, Updates | erreurs, temps, événements, service, mises à jour
+fermo | gestoppt | arrêté
+generico | generisch | générique
+gestionale | Praxissoftware | logiciel du cabinet
+ieri alle {ora} | gestern um {ora} | hier à {ora}
+il gateway continua a funzionare ma non riceve aggiornamenti. Contatta | das Gateway läuft weiter, erhält aber keine Updates mehr. Bi | le gateway continue de fonctionner mais ne reçoit 
+il tecnico imposta una volta l'indirizzo del gateway sull'apparecchio. | der Techniker stellt die Adresse des Gateways einmal am Gerä | le technicien règle une fois l'adresse du gateway 
+il {data} alle {ora} | am {data} um {ora} | le {data} à {ora}
+in attesa | wartend | en attente
+in coda morta | in der Fehlerablage | en file d'erreurs
+inseriscilo nel gateway. L'apparecchio compare qui da solo dopo qualch | in das Gateway einstecken. Das Gerät erscheint nach einigen  | branchez-le sur le gateway. L'appareil apparaît ic
+mai | nie | jamais
+mancano {n} giorni | noch {n} Tage | encore {n} jours
+nessun dato nelle ultime 24 ore | keine Daten in den letzten 24 Stunden | aucune donnée ces dernières 24 heures
+oggi alle {ora} | heute um {ora} | aujourd'hui à {ora}
+ogni controllo con il comando da eseguire | jede Prüfung mit dem auszuführenden Befehl | chaque contrôle avec la commande à exécuter
+ok | ok | ok
+operazione non riuscita | Vorgang fehlgeschlagen | opération échouée
+ore operative | Betriebsstunden | heures de fonctionnement
+prima di usare il gateway. | bevor Sie das Gateway verwenden. | avant d'utiliser le gateway.
+protocollo | Protokoll | protocole
+recapitate al gestionale | an die Praxissoftware zugestellt | transmises au logiciel du cabinet
+recapitati oggi | heute zugestellt | transmis aujourd'hui
+risultati ricevuti | empfangene Ergebnisse | résultats reçus
+sconosciuto | unbekannt | inconnu
+trasmissioni fallite | fehlgeschlagene Übertragungen | transmissions échouées
+ultimo invio | letzter Versand | dernier envoi
+urinalisi | Urinanalyse | analyse d'urine
+verifico… | prüfe… | vérification…
+{name} non riceve i risultati. | {name} empfängt keine Ergebnisse. | {name} ne reçoit pas les résultats.
+{name}: cavo USB non rilevato. | {name}: USB-Kabel nicht erkannt. | {name} : câble USB non détecté.
+{name}: collegato. | {name}: verbunden. | {name} : connecté.
+{name}: il cavo non è collegato. | {name}: Das Kabel ist nicht angeschlossen. | {name} : le câble n'est pas branché.
+{name}: il gateway non lo riceve. | {name}: Das Gateway empfängt es nicht. | {name} : le gateway ne le reçoit pas.
+{name}: manca il tipo di collegamento. | {name}: Die Verbindungsart fehlt. | {name} : le type de connexion manque.
+{name}: non risponde. | {name}: antwortet nicht. | {name} : ne répond pas.
+{name}: pronto a ricevere. | {name}: empfangsbereit. | {name} : prêt à recevoir.
+{name}: risponde. | {name}: antwortet. | {name} : répond.
+{nomi}. Il tecnico deve confermarlo una volta, poi funziona da solo. | {nomi}. Der Techniker muss es einmal bestätigen, danach läuf | {nomi}. Le technicien doit le confirmer une fois, 
+{n} analisi | {n} Analysen | {n} analyses
+{n} collegati | {n} verbunden | {n} connectés
+{n} da assegnare | {n} zuzuweisen | {n} à attribuer
+{n} da controllare | {n} zu prüfen | {n} à vérifier
+{n} da rispedire | {n} erneut zu senden | {n} à renvoyer
+{n} in attesa | {n} wartend | {n} en attente
+{n} in attesa di analisi | {n} warten auf Analysen | {n} en attente d'analyses
+{n} in attesa di invio | {n} warten auf Versand | {n} en attente d'envoi
+{n} messaggi da rispedire | {n} Nachrichten erneut zu senden | {n} messages à renvoyer
+{n} non recapitati | {n} nicht zugestellt | {n} non transmis
+{n} nuovi apparecchi trovati — apri Analizzatori per attivarli | {n} neue Geräte gefunden — öffnen Sie «Analysegeräte», um si | {n} nouveaux appareils trouvés — ouvrez « Analyseu
+{n} recapitati | {n} zugestellt | {n} transmis
+{n} recapitati oggi | {n} heute zugestellt | {n} transmis aujourd'hui
+{n} risultati in attesa | {n} Ergebnisse warten | {n} résultats en attente
+{n} risultati non arrivati al gestionale | {n} Ergebnisse nicht an die Praxissoftware zugestellt | {n} résultats non transmis au logiciel du cabinet
+{n} risultati oggi | {n} Ergebnisse heute | {n} résultats aujourd'hui
+{ok} di {n} risultati recapitati | {ok} von {n} Ergebnissen zugestellt | {ok} résultats transmis sur {n}
+{up} di {n} attivi | {up} von {n} aktiv | {up} sur {n} actifs

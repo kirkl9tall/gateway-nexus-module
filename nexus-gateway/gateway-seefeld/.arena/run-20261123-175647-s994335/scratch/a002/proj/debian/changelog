@@ -1,0 +1,19 @@
+jerumednexus-gateway (1.1.0) stable; urgency=medium
+
+  * Hardened auth (bcrypt), CSRF, rate limiting, session lifetime.
+  * API token required on HTTP ingestion server.
+  * Complete HL7 escape including CR/LF/FS to prevent framing injection.
+  * MSH-18 charset coherent with wire encoding; timezone-aware timestamps.
+  * ACK correlation via MSH-10 to prevent cross-message ACK confusion.
+  * Real LOINC codes for previously-placeholder analytes.
+  * Cross-platform signal handling (Windows dev support).
+  * Plug-and-play device detection via udev.
+  * .deb packaging + Debian-native install with dedicated system user.
+
+ -- Jerumed Nexus GmbH <info@jerumed-nexus.ch>  Mon, 25 Aug 2025 12:00:00 +0200
+
+jerumednexus-gateway (1.0.0) stable; urgency=low
+
+  * Initial release.
+
+ -- Jerumed Nexus GmbH <info@jerumed-nexus.ch>  Wed, 01 Jan 2025 00:00:00 +0100
